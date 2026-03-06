@@ -594,27 +594,22 @@ async function generatePDF() {
   closeExportModal();
 }
 
+let _fontBase64Cache = null;
 async function loadChineseFont(doc) {
-  const FONT_KEY = 'cuesheet_font_noto';
-  let fontBase64 = localStorage.getItem(FONT_KEY);
-  if (!fontBase64) {
+  if (!_fontBase64Cache) {
     try {
-      const resp = await fetch('https://cdn.jsdelivr.net/gh/nicholasgasior/gfonts-base64/fonts/noto-sans-tc/NotoSansTC-Regular-base64.txt');
-      if (resp.ok) { fontBase64 = await resp.text(); try { localStorage.setItem(FONT_KEY, fontBase64); } catch(e) {} }
-    } catch(e) {}
+      const resp = await fetch('/fonts/NotoSansTC-Regular.ttf');
+      if (!resp.ok) throw new Error('Font fetch failed');
+      const buf = await resp.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      _fontBase64Cache = btoa(binary);
+    } catch(e) { console.error('Font load error:', e); return; }
   }
-  if (!fontBase64) {
-    try {
-      const resp = await fetch('https://raw.githubusercontent.com/nicholasgasior/gfonts-base64/master/fonts/noto-sans-tc/NotoSansTC-Regular-base64.txt');
-      if (resp.ok) { fontBase64 = await resp.text(); try { localStorage.setItem(FONT_KEY, fontBase64); } catch(e) {} }
-    } catch(e) {}
-  }
-  if (fontBase64) {
-    const base64Data = fontBase64.replace(/^data:[^;]+;base64,/, '');
-    doc.addFileToVFS('NotoSansTC-Regular.ttf', base64Data);
-    doc.addFont('NotoSansTC-Regular.ttf', 'NotoSansTC', 'normal');
-    doc.setFont('NotoSansTC', 'normal');
-  }
+  doc.addFileToVFS('NotoSansTC-Regular.ttf', _fontBase64Cache);
+  doc.addFont('NotoSansTC-Regular.ttf', 'NotoSansTC', 'normal');
+  doc.setFont('NotoSansTC', 'normal');
 }
 
 // ============ Init ============
