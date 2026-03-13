@@ -538,24 +538,24 @@ async function generatePDF() {
   const pageH = doc.internal.pageSize.getHeight();
 
   doc.setFont('NotoSansTC', 'normal');
-  doc.setFontSize(18);
-  doc.text(state.event.name || '活動流程表', pageW / 2, 18, { align: 'center' });
+  doc.setFontSize(14);
+  doc.text(state.event.name || '活動流程表', pageW / 2, 12, { align: 'center' });
 
   if (selectedRoles.length < state.roles.length) {
-    doc.setFontSize(11); doc.setTextColor(100);
-    doc.text(`${selectedRoles.join(' / ')} 版本`, pageW / 2, 25, { align: 'center' });
+    doc.setFontSize(9); doc.setTextColor(100);
+    doc.text(`${selectedRoles.join(' / ')} 版本`, pageW / 2, 18, { align: 'center' });
     doc.setTextColor(0);
   }
 
-  let infoY = selectedRoles.length < state.roles.length ? 30 : 25;
-  doc.setFontSize(9); doc.setTextColor(80);
+  let infoY = selectedRoles.length < state.roles.length ? 22 : 17;
+  doc.setFontSize(8); doc.setTextColor(80);
   const parts = [];
   if (state.event.date) parts.push(`日期：${state.event.date}`);
   if (state.event.venue) parts.push(`場地：${state.event.venue}`);
   if (state.event.organizer) parts.push(`主辦：${state.event.organizer}`);
   if (state.event.contact) parts.push(`聯絡人：${state.event.contact}`);
   if (state.event.phone) parts.push(`電話：${state.event.phone}`);
-  if (parts.length) { doc.text(parts.join('    '), pageW / 2, infoY, { align: 'center' }); infoY += 6; }
+  if (parts.length) { doc.text(parts.join('   '), pageW / 2, infoY, { align: 'center' }); infoY += 4; }
   doc.setTextColor(0);
 
   const headers = ['#', '時間', '時長', '項目', ...selectedRoles];
@@ -563,7 +563,7 @@ async function generatePDF() {
   let num = 1;
   state.rows.forEach(row => {
     if (row.isSection) {
-      bodyData.push([{ content: row.sectionLabel || '---', colSpan: headers.length, styles: { fontStyle: 'bold', fillColor: [230,232,238], textColor: [26,26,46], fontSize: 10, font: 'NotoSansTC' } }]);
+      bodyData.push([{ content: row.sectionLabel || '---', colSpan: headers.length, styles: { fontStyle: 'bold', fillColor: [230,232,238], textColor: [26,26,46], fontSize: 8, cellPadding: 1.5, font: 'NotoSansTC' } }]);
     } else {
       const r = [num++, row.time || '', row.duration || '', row.item || ''];
       selectedRoles.forEach(role => r.push((row.notes && row.notes[role]) || ''));
@@ -578,23 +578,53 @@ async function generatePDF() {
   });
 
   // Dynamic column width calculation
-  const tableW = pageW - 28; // 14mm margin each side
-  const fixedW = 8 + 16 + 12; // #, time, duration
+  const margin = 10; // tighter margins for more space
+  const tableW = pageW - margin * 2;
   const roleCount = selectedRoles.length;
-  const itemW = Math.max(28, Math.min(45, tableW * 0.15));
-  const roleW = Math.max(20, (tableW - fixedW - itemW) / roleCount);
+
+  // Fixed columns: #=6, time=14, duration=10
+  const numW = 6, timeW = 14, durW = 10;
+  const fixedW = numW + timeW + durW;
+
+  // Item column: give it proportional space but not too much
+  const remainForContent = tableW - fixedW;
+  const itemW = Math.max(24, Math.min(40, remainForContent * 0.12));
+
+  // Role columns: distribute remaining space, weighted by content length
+  const remainForRoles = remainForContent - itemW;
+  const roleW = Math.max(18, remainForRoles / roleCount);
   const roleColStyles = {};
   for (let i = 0; i < roleCount; i++) { roleColStyles[4 + i] = { cellWidth: roleW }; }
 
+  // Adaptive font size: shrink when many columns
+  const baseFontSize = roleCount >= 7 ? 6.5 : roleCount >= 5 ? 7 : 7.5;
+  const headerFontSize = baseFontSize + 0.5;
+
+  // Max row height: prevent single rows from spanning pages
+  // For landscape A4: usable height ~190mm, allow max ~45mm per row (about 4 rows/page)
+  const maxRowH = isLandscape ? 45 : 55;
+
   doc.autoTable({
-    startY: infoY, head: [headers], body: bodyData, margin: { left: 14, right: 14 },
-    styles: { font: 'NotoSansTC', fontSize: 8, cellPadding: 2.5, lineWidth: 0.1, lineColor: [200,200,200], overflow: 'linebreak' },
-    headStyles: { fillColor: [26,26,46], textColor: [255,255,255], fontSize: 8.5, fontStyle: 'bold', font: 'NotoSansTC' },
-    columnStyles: { 0: { cellWidth: 8, halign: 'center' }, 1: { cellWidth: 16 }, 2: { cellWidth: 12, halign: 'center' }, 3: { cellWidth: itemW }, ...roleColStyles },
-    didParseCell: function(data) { if (data.section === 'head' && headerStyles[data.column.index]) Object.assign(data.cell.styles, headerStyles[data.column.index]); },
+    startY: infoY, head: [headers], body: bodyData, margin: { left: margin, right: margin, top: 8, bottom: 12 },
+    styles: { font: 'NotoSansTC', fontSize: baseFontSize, cellPadding: 1.5, lineWidth: 0.1, lineColor: [200,200,200], overflow: 'linebreak', valign: 'top' },
+    headStyles: { fillColor: [26,26,46], textColor: [255,255,255], fontSize: headerFontSize, fontStyle: 'bold', font: 'NotoSansTC', cellPadding: 1.5 },
+    columnStyles: { 0: { cellWidth: numW, halign: 'center' }, 1: { cellWidth: timeW }, 2: { cellWidth: durW, halign: 'center' }, 3: { cellWidth: itemW }, ...roleColStyles },
+    didParseCell: function(data) {
+      if (data.section === 'head' && headerStyles[data.column.index]) Object.assign(data.cell.styles, headerStyles[data.column.index]);
+      // Clamp row height: truncate overflowing text with ellipsis indicator
+      if (data.section === 'body' && data.cell.text && Array.isArray(data.cell.text)) {
+        // Estimate: each line ~baseFontSize * 0.35mm height + padding
+        const lineH = baseFontSize * 0.45;
+        const maxLines = Math.floor((maxRowH - 3) / lineH);
+        if (data.cell.text.length > maxLines) {
+          data.cell.text = data.cell.text.slice(0, maxLines);
+          data.cell.text[maxLines - 1] = (data.cell.text[maxLines - 1] || '') + '...';
+        }
+      }
+    },
     didDrawPage: function() {
-      doc.setFontSize(8); doc.setTextColor(150); doc.setFont('NotoSansTC', 'normal');
-      doc.text(`${state.event.name || '活動流程表'} - 第 ${doc.internal.getCurrentPageInfo().pageNumber} 頁`, pageW / 2, pageH - 8, { align: 'center' });
+      doc.setFontSize(7); doc.setTextColor(150); doc.setFont('NotoSansTC', 'normal');
+      doc.text(`${state.event.name || '活動流程表'} - 第 ${doc.internal.getCurrentPageInfo().pageNumber} 頁`, pageW / 2, pageH - 6, { align: 'center' });
     }
   });
 
