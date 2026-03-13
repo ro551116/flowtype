@@ -565,7 +565,7 @@ async function generatePDF() {
     if (row.isSection) {
       bodyData.push([{ content: row.sectionLabel || '---', colSpan: headers.length, styles: { fontStyle: 'bold', fillColor: [230,232,238], textColor: [26,26,46], fontSize: 10, font: 'NotoSansTC' } }]);
     } else {
-      const r = [num++, row.time || '', row.duration ? `${row.duration}min` : '', row.item || ''];
+      const r = [num++, row.time || '', row.duration || '', row.item || ''];
       selectedRoles.forEach(role => r.push((row.notes && row.notes[role]) || ''));
       bodyData.push(r);
     }
@@ -577,11 +577,20 @@ async function generatePDF() {
     headerStyles[4 + i] = { fillColor: PDF_ROLE_COLORS[gi % PDF_ROLE_COLORS.length], textColor: [255,255,255] };
   });
 
+  // Dynamic column width calculation
+  const tableW = pageW - 28; // 14mm margin each side
+  const fixedW = 8 + 16 + 12; // #, time, duration
+  const roleCount = selectedRoles.length;
+  const itemW = Math.max(28, Math.min(45, tableW * 0.15));
+  const roleW = Math.max(20, (tableW - fixedW - itemW) / roleCount);
+  const roleColStyles = {};
+  for (let i = 0; i < roleCount; i++) { roleColStyles[4 + i] = { cellWidth: roleW }; }
+
   doc.autoTable({
     startY: infoY, head: [headers], body: bodyData, margin: { left: 14, right: 14 },
-    styles: { font: 'NotoSansTC', fontSize: 8.5, cellPadding: 3, lineWidth: 0.1, lineColor: [200,200,200], overflow: 'linebreak' },
-    headStyles: { fillColor: [26,26,46], textColor: [255,255,255], fontSize: 9, fontStyle: 'bold', font: 'NotoSansTC' },
-    columnStyles: { 0: { cellWidth: 8, halign: 'center' }, 1: { cellWidth: 18 }, 2: { cellWidth: 14 }, 3: { cellWidth: 30 } },
+    styles: { font: 'NotoSansTC', fontSize: 8, cellPadding: 2.5, lineWidth: 0.1, lineColor: [200,200,200], overflow: 'linebreak' },
+    headStyles: { fillColor: [26,26,46], textColor: [255,255,255], fontSize: 8.5, fontStyle: 'bold', font: 'NotoSansTC' },
+    columnStyles: { 0: { cellWidth: 8, halign: 'center' }, 1: { cellWidth: 16 }, 2: { cellWidth: 12, halign: 'center' }, 3: { cellWidth: itemW }, ...roleColStyles },
     didParseCell: function(data) { if (data.section === 'head' && headerStyles[data.column.index]) Object.assign(data.cell.styles, headerStyles[data.column.index]); },
     didDrawPage: function() {
       doc.setFontSize(8); doc.setTextColor(150); doc.setFont('NotoSansTC', 'normal');
