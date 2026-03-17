@@ -432,7 +432,7 @@ function addRole() {
 function removeRole(idx) {
   const name = state.roles[idx];
   state.roles.splice(idx, 1);
-  state.rows.forEach(r => delete r.notes[name]);
+  state.rows.forEach(r => { if (r.notes) delete r.notes[name]; });
   renderRoles();
   renderTable();
   autoSave();
