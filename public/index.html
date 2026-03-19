@@ -220,8 +220,10 @@ td.row-actions { white-space: nowrap; text-align: center; }
 
   <!-- ===== Editor Page ===== -->
   <div class="event-editor-page" id="editorPage">
-    <div style="margin-bottom:16px;">
+    <div style="margin-bottom:16px;display:flex;gap:8px;align-items:center;">
       <button class="btn btn-secondary btn-sm" onclick="showListPage()">&larr; 返回列表</button>
+      <button class="btn btn-secondary btn-sm" id="btnUndo" onclick="undo()" style="margin-left:auto;opacity:0.3;" title="復原上一步 (Ctrl+Z)">&#x21A9; 復原</button>
+      <button class="btn btn-secondary btn-sm" id="btnBackups" onclick="openBackupModal()">&#x1f4be; 版本紀錄</button>
     </div>
     <div class="event-info">
       <h2>活動資訊</h2>
@@ -277,10 +279,24 @@ td.row-actions { white-space: nowrap; text-align: center; }
   </div>
 </div>
 
+<!-- Backup Modal -->
+<div class="modal-overlay" id="backupModal">
+  <div class="modal" style="width:520px;">
+    <h3>&#x1f4be; 版本紀錄</h3>
+    <p style="font-size:13px;color:#666;margin-bottom:16px;">每次儲存自動備份，可回復到先前版本</p>
+    <div id="backupList" style="max-height:400px;overflow-y:auto;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-secondary" onclick="closeBackupModal()">關閉</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============ State ============
 let currentEventId = null;
 let state = null;
+let undoStack = [];  // undo history (max 50 snapshots)
+const MAX_UNDO = 50;
 
 const ROLE_COLORS = [
   { bg: '#e3f2fd', fg: '#1565c0' }, { bg: '#fff3e0', fg: '#e65100' },
@@ -356,10 +372,29 @@ function showListPage() {
   loadEventList();
 }
 
+// ============ Data Normalization ============
+function normalizeState() {
+  if (!state) return;
+  if (!state.roles) state.roles = [];
+  if (!state.rows) state.rows = [];
+  state.rows.forEach(row => {
+    if (!row.notes) row.notes = {};
+    if (!row.isSection) {
+      // Ensure all roles have entries in notes
+      state.roles.forEach(role => {
+        if (!(role in row.notes)) row.notes[role] = '';
+      });
+    }
+  });
+}
+
 // ============ Editor Page ============
 async function openEvent(id) {
   currentEventId = id;
   state = await api('GET', '/events/' + id);
+  normalizeState();
+  undoStack = [];
+  updateUndoBtn();
   document.getElementById('listPage').style.display = 'none';
   document.getElementById('editorPage').style.display = 'block';
   document.getElementById('saveIndicator').style.display = 'inline';
@@ -395,9 +430,21 @@ function autoSave() {
   saveTimer = setTimeout(saveToServer, 800);
 }
 
+function pushUndo() {
+  undoStack.push(JSON.stringify(state));
+  if (undoStack.length > MAX_UNDO) undoStack.shift();
+  updateUndoBtn();
+}
+
+function updateUndoBtn() {
+  const btn = document.getElementById('btnUndo');
+  if (btn) btn.style.opacity = undoStack.length > 0 ? '1' : '0.3';
+}
+
 async function saveToServer() {
   if (!currentEventId || !state) return;
   readEventFields();
+  pushUndo();
   await api('PUT', '/events/' + currentEventId, state);
   const ind = document.getElementById('saveIndicator');
   ind.textContent = '已儲存';
@@ -422,7 +469,10 @@ function addRole() {
   const name = input.value.trim();
   if (!name || state.roles.includes(name)) return;
   state.roles.push(name);
-  state.rows.forEach(r => { if (!r.isSection) r.notes[name] = ''; });
+  state.rows.forEach(r => {
+    if (!r.notes) r.notes = {};
+    if (!r.isSection) r.notes[name] = '';
+  });
   input.value = '';
   renderRoles();
   renderTable();
@@ -467,7 +517,7 @@ function renderBody() {
       html += `<td class="col-num" style="color:#aaa;font-size:12px;">${num++}</td>`;
       html += `<td><input type="time" value="${esc(row.time)}" oninput="state.rows[${i}].time=this.value;autoSave()"></td>`;
       html += `<td><input value="${esc(row.duration)}" placeholder="分鐘" oninput="state.rows[${i}].duration=this.value;autoSave()"></td>`;
-      html += `<td><input value="${esc(row.item)}" placeholder="項目名稱" oninput="state.rows[${i}].item=this.value;autoSave()"></td>`;
+      html += `<td><textarea placeholder="項目名稱" oninput="state.rows[${i}].item=this.value;autoSave()">${esc(row.item)}</textarea></td>`;
       state.roles.forEach(role => {
         const val = (row.notes && row.notes[role]) || '';
         html += `<td><textarea placeholder="${esc(role)}備註" oninput="state.rows[${i}].notes[${JSON.stringify(role)}]=this.value;autoSave()">${esc(val)}</textarea></td>`;
@@ -649,6 +699,81 @@ async function loadChineseFont(doc) {
   doc.addFileToVFS('NotoSansTC-Regular.ttf', _fontBase64Cache);
   doc.addFont('NotoSansTC-Regular.ttf', 'NotoSansTC', 'normal');
   doc.setFont('NotoSansTC', 'normal');
+}
+
+// ============ Undo ============
+async function undo() {
+  if (undoStack.length === 0) return;
+  const prev = JSON.parse(undoStack.pop());
+  state = prev;
+  normalizeState();
+  syncEventFields();
+  renderRoles();
+  renderTable();
+  updateUndoBtn();
+  // Save the restored state to server (without pushing to undo)
+  await api('PUT', '/events/' + currentEventId, state);
+  const ind = document.getElementById('saveIndicator');
+  ind.textContent = '已復原';
+  ind.classList.add('saved');
+  setTimeout(() => { ind.textContent = '自動儲存中'; ind.classList.remove('saved'); }, 1500);
+}
+
+// Ctrl+Z / Cmd+Z shortcut for undo
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+    // Only intercept if not focused on an input/textarea
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return; // let browser handle native undo
+    e.preventDefault();
+    undo();
+  }
+});
+
+// ============ Backup / Restore ============
+function openBackupModal() {
+  document.getElementById('backupModal').classList.add('active');
+  loadBackups();
+}
+function closeBackupModal() { document.getElementById('backupModal').classList.remove('active'); }
+
+async function loadBackups() {
+  const container = document.getElementById('backupList');
+  container.innerHTML = '<p style="color:#aaa;text-align:center;">載入中...</p>';
+  const backups = await api('GET', '/events/' + currentEventId + '/backups');
+  if (backups.length === 0) {
+    container.innerHTML = '<p style="color:#aaa;text-align:center;">目前沒有備份紀錄</p>';
+    return;
+  }
+  container.innerHTML = backups.map((b, i) => {
+    const date = new Date(b.createdAt);
+    const timeStr = date.toLocaleString('zh-TW');
+    const sizeKB = (b.size / 1024).toFixed(1);
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #f0f0f0;${i===0?'background:#f7f8fc;':''}">
+      <div>
+        <div style="font-size:13px;font-weight:500;">${timeStr}</div>
+        <div style="font-size:11px;color:#aaa;">${sizeKB} KB</div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="restoreBackup('${esc(b.filename)}')">回復</button>
+    </div>`;
+  }).join('');
+}
+
+async function restoreBackup(filename) {
+  if (!confirm('確定要回復到這個版本嗎？目前的版本會自動備份。')) return;
+  const result = await api('POST', '/events/' + currentEventId + '/restore/' + filename);
+  if (result.ok && result.data) {
+    state = result.data;
+    normalizeState();
+    syncEventFields();
+    renderRoles();
+    renderTable();
+    closeBackupModal();
+    const ind = document.getElementById('saveIndicator');
+    ind.textContent = '已回復';
+    ind.classList.add('saved');
+    setTimeout(() => { ind.textContent = '自動儲存中'; ind.classList.remove('saved'); }, 2000);
+  }
 }
 
 // ============ Init ============
