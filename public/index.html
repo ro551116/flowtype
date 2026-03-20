@@ -543,7 +543,8 @@ function renderBody() {
       html += `<td><textarea placeholder="項目名稱" oninput="state.rows[${i}].item=this.value;autoSave()">${esc(row.item)}</textarea></td>`;
       state.roles.forEach(role => {
         const val = (row.notes && row.notes[role]) || '';
-        html += `<td><textarea placeholder="${esc(role)}備註" oninput="state.rows[${i}].notes[${JSON.stringify(role)}]=this.value;autoSave()">${esc(val)}</textarea></td>`;
+        const ri = state.roles.indexOf(role);
+        html += `<td><textarea placeholder="${esc(role)}備註" oninput="state.rows[${i}].notes[state.roles[${ri}]]=this.value;autoSave()">${esc(val)}</textarea></td>`;
       });
       html += `<td class="row-actions">`;
       html += `<button class="insert-btn" onclick="insertRow(${i})" title="在下方插入">&#x2795;</button>`;
