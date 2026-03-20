@@ -538,7 +538,7 @@ function renderBody() {
     } else {
       html += `<tr draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event)" ondragenter="onDragEnter(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,${i})" ondragend="onDragEnd(event)">`;
       html += `<td class="col-num" style="color:#aaa;font-size:12px;"><span class="drag-handle" title="拖曳排序">&#x2630;</span> ${num++}</td>`;
-      html += `<td><input type="time" value="${esc(row.time)}" oninput="state.rows[${i}].time=this.value;autoSave()"></td>`;
+      html += `<td><input value="${esc(row.time)}" placeholder="時間" oninput="state.rows[${i}].time=this.value;autoSave()"></td>`;
       html += `<td><input value="${esc(row.duration)}" placeholder="分鐘" oninput="state.rows[${i}].duration=this.value;autoSave()"></td>`;
       html += `<td><textarea placeholder="項目名稱" oninput="state.rows[${i}].item=this.value;autoSave()">${esc(row.item)}</textarea></td>`;
       state.roles.forEach(role => {
