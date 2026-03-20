@@ -122,7 +122,8 @@ async function load() {
   const id = location.pathname.split('/').pop();
   const res = await fetch('/api/events/' + id);
   if (!res.ok) { document.getElementById('title').textContent = '找不到此活動'; return; }
-  data = await res.json();
+  lastJson = await res.text();
+  data = JSON.parse(lastJson);
 
   // Header
   document.title = (data.event.name || '流程表') + ' — 線上預覽';
@@ -203,6 +204,31 @@ function renderTable() {
 }
 
 load();
+
+// Auto-refresh: poll every 3s for changes
+let lastJson = '';
+const eventId = location.pathname.split('/').pop();
+
+setInterval(async () => {
+  try {
+    const res = await fetch('/api/events/' + eventId);
+    if (!res.ok) return;
+    const text = await res.text();
+    if (text === lastJson) return;
+    lastJson = text;
+    data = JSON.parse(text);
+    // Keep user's filter: remove deleted roles, auto-show new roles
+    const oldVisible = new Set(visibleRoles);
+    visibleRoles = new Set(data.roles.filter(r => oldVisible.has(r)));
+    data.roles.forEach(r => { if (!oldVisible.has(r)) visibleRoles.add(r); });
+    document.getElementById('title').textContent = data.event.name || '活動流程表';
+    renderRoleBar();
+    document.querySelectorAll('#roleBar input[type=checkbox]').forEach(cb => {
+      cb.checked = visibleRoles.has(cb.dataset.role);
+    });
+    renderTable();
+  } catch {}
+}, 3000);
 </script>
 </body>
 </html>
