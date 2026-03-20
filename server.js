@@ -137,4 +137,9 @@ app.post('/api/events/:id/duplicate', (req, res) => {
   res.json({ id: newId });
 });
 
+// View page (serve view.html for /v/:id)
+app.get('/v/:id', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'view.html'));
+});
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

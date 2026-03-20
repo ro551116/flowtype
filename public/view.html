@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>流程表</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; background: #1a1a2e; color: #333; }
+
+.view-header {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  color: #fff; padding: 24px 32px; text-align: center;
+}
+.view-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+.view-header .meta { font-size: 13px; color: rgba(255,255,255,0.6); display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+
+.view-container { max-width: 1600px; margin: 0 auto; padding: 0; }
+
+/* Role filter bar */
+.role-bar {
+  background: #16213e; padding: 12px 32px;
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  position: sticky; top: 0; z-index: 100;
+}
+.role-bar label {
+  display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500;
+  cursor: pointer; padding: 5px 12px; border-radius: 16px; transition: all 0.2s;
+  user-select: none;
+}
+.role-bar label:hover { filter: brightness(1.1); }
+.role-bar input[type="checkbox"] { width: 14px; height: 14px; accent-color: #4a6cf7; }
+
+/* Table */
+.flow-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
+.flow-table th {
+  padding: 10px 12px; text-align: left; font-weight: 600; font-size: 12px;
+  border-bottom: 2px solid #e0e0e0; white-space: nowrap;
+  position: sticky; top: 44px; z-index: 50; background: #f7f8fc;
+}
+.flow-table td {
+  padding: 8px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top;
+  line-height: 1.5;
+}
+.flow-table tr:hover { background: #fafbff; }
+
+/* Section row */
+.section-row {
+  background: #e8eaf0 !important;
+}
+.section-row td {
+  font-weight: 700; font-size: 14px; color: #1a1a2e;
+  padding: 10px 16px; border-bottom: 2px solid #d0d4de;
+}
+
+/* Column sizing */
+.col-num { width: 36px; text-align: center; color: #aaa; font-size: 12px; }
+.col-time { width: 70px; white-space: nowrap; font-weight: 500; }
+.col-dur { width: 50px; text-align: center; color: #888; }
+.col-item { min-width: 160px; font-weight: 500; }
+.col-note { min-width: 100px; }
+
+/* Note cell content */
+.note-cell { white-space: pre-wrap; font-size: 12px; color: #555; }
+.note-cell:not(:empty) {
+  background: rgba(0,0,0,0.02); border-radius: 4px; padding: 4px 8px;
+}
+
+/* Role colors */
+.rc-0 { color: #1565c0; } .rh-0 { background: #e3f2fd; color: #1565c0; }
+.rc-1 { color: #e65100; } .rh-1 { background: #fff3e0; color: #e65100; }
+.rc-2 { color: #2e7d32; } .rh-2 { background: #e8f5e9; color: #2e7d32; }
+.rc-3 { color: #7b1fa2; } .rh-3 { background: #f3e5f5; color: #7b1fa2; }
+.rc-4 { color: #c62828; } .rh-4 { background: #fce4ec; color: #c62828; }
+.rc-5 { color: #00838f; } .rh-5 { background: #e0f7fa; color: #00838f; }
+.rc-6 { color: #f57f17; } .rh-6 { background: #fff8e1; color: #f57f17; }
+.rc-7 { color: #4e342e; } .rh-7 { background: #efebe9; color: #4e342e; }
+
+/* Loading */
+.loading { text-align: center; padding: 60px; color: #fff; font-size: 16px; }
+
+/* Print */
+@media print {
+  body { background: #fff; }
+  .view-header { background: #1a1a2e; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .role-bar { display: none; }
+  .flow-table th { position: static; }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .view-header { padding: 16px; }
+  .view-header h1 { font-size: 18px; }
+  .flow-table { font-size: 11px; }
+  .flow-table th, .flow-table td { padding: 6px 8px; }
+}
+</style>
+</head>
+<body>
+
+<div class="view-header" id="header">
+  <h1 id="title">載入中...</h1>
+  <div class="meta" id="meta"></div>
+</div>
+<div class="role-bar" id="roleBar"></div>
+<div class="view-container">
+  <table class="flow-table" id="flowTable">
+    <thead id="thead"></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<script>
+const ROLE_COLORS = 8;
+let data = null;
+let visibleRoles = new Set();
+
+function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
+
+async function load() {
+  const id = location.pathname.split('/').pop();
+  const res = await fetch('/api/events/' + id);
+  if (!res.ok) { document.getElementById('title').textContent = '找不到此活動'; return; }
+  data = await res.json();
+
+  // Header
+  document.title = (data.event.name || '流程表') + ' — 線上預覽';
+  document.getElementById('title').textContent = data.event.name || '活動流程表';
+  const meta = [];
+  if (data.event.date) meta.push('日期：' + data.event.date);
+  if (data.event.venue) meta.push('場地：' + esc(data.event.venue));
+  if (data.event.organizer) meta.push('主辦：' + esc(data.event.organizer));
+  if (data.event.contact) meta.push('聯絡人：' + esc(data.event.contact));
+  if (data.event.phone) meta.push('電話：' + data.event.phone);
+  document.getElementById('meta').innerHTML = meta.map(m => '<span>' + m + '</span>').join('');
+
+  // Role filter
+  visibleRoles = new Set(data.roles);
+  renderRoleBar();
+  renderTable();
+}
+
+function renderRoleBar() {
+  const bar = document.getElementById('roleBar');
+  bar.innerHTML = '';
+  data.roles.forEach((role, i) => {
+    const ci = i % ROLE_COLORS;
+    const lbl = document.createElement('label');
+    lbl.className = 'rh-' + ci;
+    lbl.innerHTML = `<input type="checkbox" checked data-role="${esc(role)}" onchange="toggleRole(this)"> ${esc(role)}`;
+    bar.appendChild(lbl);
+  });
+}
+
+function toggleRole(cb) {
+  const role = cb.dataset.role;
+  if (cb.checked) visibleRoles.add(role); else visibleRoles.delete(role);
+  renderTable();
+}
+
+function renderTable() {
+  const roles = data.roles.filter(r => visibleRoles.has(r));
+
+  // Header
+  let hhtml = '<tr><th class="col-num">#</th><th class="col-time">時間</th><th class="col-dur">時長</th><th class="col-item">項目</th>';
+  roles.forEach((role, ri) => {
+    const ci = data.roles.indexOf(role) % ROLE_COLORS;
+    hhtml += `<th class="col-note rc-${ci}">${esc(role)}</th>`;
+  });
+  hhtml += '</tr>';
+  document.getElementById('thead').innerHTML = hhtml;
+
+  // Body
+  let bhtml = '';
+  let num = 1;
+  const colspan = 4 + roles.length;
+
+  data.rows.forEach(row => {
+    if (row.isSection) {
+      bhtml += `<tr class="section-row"><td colspan="${colspan}">${esc(row.sectionLabel)}</td></tr>`;
+      return;
+    }
+
+    // Skip completely empty rows
+    const hasContent = row.item || row.time || roles.some(r => row.notes && row.notes[r]);
+    if (!hasContent) return;
+
+    bhtml += '<tr>';
+    bhtml += `<td class="col-num">${num++}</td>`;
+    bhtml += `<td class="col-time">${esc(row.time)}</td>`;
+    bhtml += `<td class="col-dur">${row.duration ? row.duration + 'm' : ''}</td>`;
+    bhtml += `<td class="col-item">${esc(row.item).replace(/\n/g, '<br>')}</td>`;
+    roles.forEach(role => {
+      const ci = data.roles.indexOf(role) % ROLE_COLORS;
+      const val = (row.notes && row.notes[role]) || '';
+      bhtml += `<td><div class="note-cell rc-${ci}">${esc(val).replace(/\n/g, '<br>')}</div></td>`;
+    });
+    bhtml += '</tr>';
+  });
+
+  document.getElementById('tbody').innerHTML = bhtml;
+}
+
+load();
+</script>
+</body>
+</html>
