@@ -9,17 +9,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg-deep: #08080d;
-  --bg-base: #0e0e16;
-  --bg-surface: #151520;
-  --bg-elevated: #1c1c2a;
-  --accent: #e8a030;
-  --accent-dim: rgba(232,160,48,0.08);
-  --text-primary: #e4e4ec;
-  --text-secondary: #8888a0;
-  --text-muted: #50506a;
-  --border: rgba(255,255,255,0.06);
-  --border-light: rgba(255,255,255,0.1);
+  --bg-deep: #f0f1f5;
+  --bg-base: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f5f6fa;
+  --bg-hover: #ecedf2;
+  --accent: #c47a0a;
+  --accent-bright: #e8a030;
+  --accent-dim: rgba(196,122,10,0.06);
+  --text-primary: #1a1a2e;
+  --text-secondary: #5a5a72;
+  --text-muted: #9898b0;
+  --border: rgba(0,0,0,0.08);
+  --border-light: rgba(0,0,0,0.12);
   --font-ui: 'Sora', -apple-system, 'Microsoft JhengHei', sans-serif;
   --font-mono: 'Space Mono', 'SF Mono', monospace;
 }
@@ -29,30 +31,31 @@ body { font-family: var(--font-ui); background: var(--bg-deep); color: var(--tex
 body::before {
   content: '';
   position: fixed; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(0,0,0,0.03) 1px, transparent 1px);
   background-size: 32px 32px;
   pointer-events: none; z-index: 0;
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: #c8c8d4; border-radius: 3px; }
 
 .view-header {
   background: var(--bg-base);
   border-bottom: 1px solid var(--border);
-  color: #fff; padding: 24px 32px; text-align: center;
+  color: var(--text-primary); padding: 24px 32px; text-align: center;
   position: relative;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .view-header::after {
   content: '';
   position: absolute; bottom: -1px; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  opacity: 0.6;
+  background: linear-gradient(90deg, transparent, var(--accent-bright), transparent);
+  opacity: 0.5;
 }
 .view-header h1 {
   font-size: 22px; font-weight: 700; margin-bottom: 10px;
-  letter-spacing: 1px;
+  letter-spacing: 1px; color: var(--text-primary);
 }
 .view-header .meta {
   font-size: 11px; color: var(--text-secondary);
@@ -73,7 +76,7 @@ body::before {
   cursor: pointer; padding: 5px 14px; border-radius: 16px;
   transition: all 0.2s; user-select: none;
 }
-.role-bar label:hover { filter: brightness(1.2); }
+.role-bar label:hover { filter: brightness(0.95); }
 .role-bar input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--accent); }
 
 /* Table */
@@ -103,7 +106,7 @@ body::before {
 .section-row { background: var(--bg-elevated) !important; }
 .section-row td {
   font-weight: 700; font-size: 13px; color: var(--accent);
-  padding: 10px 16px; border-bottom: 2px solid rgba(232,160,48,0.2);
+  padding: 10px 16px; border-bottom: 2px solid rgba(196,122,10,0.2);
   border-left: 3px solid var(--accent);
 }
 
@@ -117,18 +120,18 @@ body::before {
 /* Note cell */
 .note-cell { white-space: pre-wrap; font-size: 12px; }
 .note-cell:not(:empty) {
-  background: rgba(255,255,255,0.03); border-radius: 4px; padding: 4px 8px;
+  background: rgba(0,0,0,0.02); border-radius: 4px; padding: 4px 8px;
 }
 
 /* Role colors */
-.rc-0 { color: #60a5fa; } .rh-0 { background: rgba(96,165,250,0.15); color: #60a5fa; }
-.rc-1 { color: #fb923c; } .rh-1 { background: rgba(251,146,60,0.15); color: #fb923c; }
-.rc-2 { color: #4ade80; } .rh-2 { background: rgba(74,222,128,0.15); color: #4ade80; }
-.rc-3 { color: #c084fc; } .rh-3 { background: rgba(192,132,252,0.15); color: #c084fc; }
-.rc-4 { color: #f87171; } .rh-4 { background: rgba(248,113,113,0.15); color: #f87171; }
-.rc-5 { color: #22d3ee; } .rh-5 { background: rgba(34,211,238,0.15); color: #22d3ee; }
-.rc-6 { color: #facc15; } .rh-6 { background: rgba(250,204,21,0.15); color: #facc15; }
-.rc-7 { color: #f472b6; } .rh-7 { background: rgba(244,114,182,0.15); color: #f472b6; }
+.rc-0 { color: #1565c0; } .rh-0 { background: #e3f2fd; color: #1565c0; }
+.rc-1 { color: #e65100; } .rh-1 { background: #fff3e0; color: #e65100; }
+.rc-2 { color: #2e7d32; } .rh-2 { background: #e8f5e9; color: #2e7d32; }
+.rc-3 { color: #7b1fa2; } .rh-3 { background: #f3e5f5; color: #7b1fa2; }
+.rc-4 { color: #c62828; } .rh-4 { background: #fce4ec; color: #c62828; }
+.rc-5 { color: #00838f; } .rh-5 { background: #e0f7fa; color: #00838f; }
+.rc-6 { color: #f57f17; } .rh-6 { background: #fff8e1; color: #f57f17; }
+.rc-7 { color: #4e342e; } .rh-7 { background: #efebe9; color: #4e342e; }
 
 /* Loading */
 .loading { text-align: center; padding: 60px; color: var(--text-muted); font-size: 14px; }
@@ -136,14 +139,10 @@ body::before {
 /* Print */
 @media print {
   body, body::before { background: #fff; }
-  .view-header { background: #1a1a2e; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .view-header { box-shadow: none; }
+  .view-header::after { display: none; }
   .role-bar { display: none; }
-  .flow-table { background: #fff; }
-  .flow-table th { position: static; background: #f0f0f0; color: #333; }
-  .flow-table td { color: #333; border-color: #ddd; }
-  .section-row { background: #e8eaf0 !important; }
-  .section-row td { color: #1a1a2e; }
-  .note-cell { color: #555; }
+  .flow-table th { position: static; }
 }
 
 /* Mobile */
@@ -183,7 +182,6 @@ async function load() {
   lastJson = await res.text();
   data = JSON.parse(lastJson);
 
-  // Header
   document.title = (data.event.name || '流程表') + ' — 線上預覽';
   document.getElementById('title').textContent = data.event.name || '活動流程表';
   const meta = [];
@@ -194,7 +192,6 @@ async function load() {
   if (data.event.phone) meta.push('電話：' + data.event.phone);
   document.getElementById('meta').innerHTML = meta.map(m => '<span>' + m + '</span>').join('');
 
-  // Role filter
   visibleRoles = new Set(data.roles);
   renderRoleBar();
   renderTable();
@@ -221,7 +218,6 @@ function toggleRole(cb) {
 function renderTable() {
   const roles = data.roles.filter(r => visibleRoles.has(r));
 
-  // Header
   let hhtml = '<tr><th class="col-num">#</th><th class="col-time">時間</th><th class="col-dur">時長</th><th class="col-item">項目</th>';
   roles.forEach((role, ri) => {
     const ci = data.roles.indexOf(role) % ROLE_COLORS;
@@ -230,7 +226,6 @@ function renderTable() {
   hhtml += '</tr>';
   document.getElementById('thead').innerHTML = hhtml;
 
-  // Body
   let bhtml = '';
   let num = 1;
   const colspan = 4 + roles.length;
@@ -241,7 +236,6 @@ function renderTable() {
       return;
     }
 
-    // Skip completely empty rows
     const hasContent = row.item || row.time || roles.some(r => row.notes && row.notes[r]);
     if (!hasContent) return;
 
@@ -263,7 +257,6 @@ function renderTable() {
 
 load();
 
-// Auto-refresh: poll every 3s for changes
 let lastJson = '';
 const eventId = location.pathname.split('/').pop();
 
@@ -275,7 +268,6 @@ setInterval(async () => {
     if (text === lastJson) return;
     lastJson = text;
     data = JSON.parse(text);
-    // Keep user's filter: remove deleted roles, auto-show new roles
     const oldVisible = new Set(visibleRoles);
     visibleRoles = new Set(data.roles.filter(r => oldVisible.has(r)));
     data.roles.forEach(r => { if (!oldVisible.has(r)) visibleRoles.add(r); });

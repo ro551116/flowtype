@@ -12,22 +12,23 @@
 <style>
 /* ═══ Design Tokens ═══ */
 :root {
-  --bg-deep: #08080d;
-  --bg-base: #0e0e16;
-  --bg-surface: #151520;
-  --bg-elevated: #1c1c2a;
-  --bg-hover: #222235;
-  --accent: #e8a030;
-  --accent-dim: rgba(232,160,48,0.08);
-  --accent-medium: rgba(232,160,48,0.2);
-  --accent-glow: rgba(232,160,48,0.4);
-  --text-primary: #e4e4ec;
-  --text-secondary: #8888a0;
-  --text-muted: #50506a;
-  --border: rgba(255,255,255,0.06);
-  --border-light: rgba(255,255,255,0.1);
-  --success: #34d399;
-  --danger: #f87171;
+  --bg-deep: #f0f1f5;
+  --bg-base: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f5f6fa;
+  --bg-hover: #ecedf2;
+  --accent: #c47a0a;
+  --accent-bright: #e8a030;
+  --accent-dim: rgba(196,122,10,0.06);
+  --accent-medium: rgba(196,122,10,0.2);
+  --accent-glow: rgba(196,122,10,0.15);
+  --text-primary: #1a1a2e;
+  --text-secondary: #5a5a72;
+  --text-muted: #9898b0;
+  --border: rgba(0,0,0,0.08);
+  --border-light: rgba(0,0,0,0.12);
+  --success: #16a34a;
+  --danger: #dc2626;
   --radius: 8px;
   --radius-lg: 12px;
   --font-ui: 'Sora', -apple-system, 'Microsoft JhengHei', sans-serif;
@@ -45,7 +46,7 @@ body {
 body::before {
   content: '';
   position: fixed; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(0,0,0,0.03) 1px, transparent 1px);
   background-size: 32px 32px;
   pointer-events: none;
   z-index: 0;
@@ -54,8 +55,8 @@ body::before {
 /* ═══ Scrollbar ═══ */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+::-webkit-scrollbar-thumb { background: #c8c8d4; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #a0a0b0; }
 
 /* ═══ Header ═══ */
 .header {
@@ -67,18 +68,19 @@ body::before {
   justify-content: space-between;
   align-items: center;
   position: sticky; top: 0; z-index: 200;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .header::after {
   content: '';
   position: absolute; bottom: -1px; left: 0; right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  opacity: 0.6;
+  background: linear-gradient(90deg, transparent, var(--accent-bright), transparent);
+  opacity: 0.5;
 }
 .header h1 {
   font-size: 14px; font-weight: 600;
   letter-spacing: 3px; text-transform: uppercase;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   cursor: pointer;
   transition: color 0.3s;
 }
@@ -100,19 +102,19 @@ body::before {
   cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px;
 }
 .btn-primary {
-  background: var(--accent); color: var(--bg-deep);
+  background: var(--accent); color: #fff;
 }
-.btn-primary:hover { background: #f0b040; box-shadow: 0 0 20px rgba(232,160,48,0.3); }
+.btn-primary:hover { background: #b06e08; box-shadow: 0 2px 12px rgba(196,122,10,0.25); }
 .btn-secondary {
   background: var(--bg-elevated); color: var(--text-secondary);
   border: 1px solid var(--border-light);
 }
 .btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--accent-medium); }
 .btn-success {
-  background: rgba(52,211,153,0.15); color: var(--success);
-  border: 1px solid rgba(52,211,153,0.3);
+  background: rgba(22,163,74,0.1); color: var(--success);
+  border: 1px solid rgba(22,163,74,0.25);
 }
-.btn-success:hover { background: rgba(52,211,153,0.25); }
+.btn-success:hover { background: rgba(22,163,74,0.18); }
 .btn-sm { padding: 6px 12px; font-size: 11px; }
 
 /* ═══ Event List Page ═══ */
@@ -143,6 +145,7 @@ body::before {
   transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
   position: relative;
   overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .event-card::before {
   content: '';
@@ -154,7 +157,7 @@ body::before {
 .event-card:hover {
   border-color: var(--accent-medium);
   transform: translateY(-3px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--accent-medium);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08), 0 0 0 1px var(--accent-medium);
 }
 .event-card:hover::before { opacity: 1; }
 .event-card h3 {
@@ -162,9 +165,9 @@ body::before {
   color: var(--text-primary);
 }
 .event-card .meta {
-  font-size: 12px; color: var(--text-muted);
+  font-size: 11px; color: var(--text-muted);
   display: flex; flex-direction: column; gap: 4px;
-  font-family: var(--font-mono); font-size: 11px;
+  font-family: var(--font-mono);
 }
 .event-card .card-actions {
   position: absolute; top: 16px; right: 16px;
@@ -200,6 +203,7 @@ body::before {
   border-radius: 2px var(--radius-lg) var(--radius-lg) 2px;
   padding: 24px 24px 24px 28px;
   margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .event-info h2 {
   font-size: 11px; font-weight: 500; margin-bottom: 16px;
@@ -229,6 +233,7 @@ body::before {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-dim);
+  background: var(--bg-base);
 }
 .info-grid input::placeholder { color: var(--text-muted); }
 
@@ -236,10 +241,11 @@ body::before {
 .roles-section {
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  border-left: 3px solid #c084fc;
+  border-left: 3px solid #7c3aed;
   border-radius: 2px var(--radius-lg) var(--radius-lg) 2px;
   padding: 24px 24px 24px 28px;
   margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .roles-section h2 {
   font-size: 11px; font-weight: 500; margin-bottom: 16px;
@@ -254,7 +260,7 @@ body::before {
   border: 1px solid transparent;
   transition: all 0.2s;
 }
-.role-tag:hover { filter: brightness(1.2); }
+.role-tag:hover { filter: brightness(0.95); }
 .role-tag .remove-role {
   cursor: pointer; font-size: 14px; line-height: 1;
   opacity: 0.5; transition: opacity 0.2s;
@@ -271,18 +277,19 @@ body::before {
 .add-role-row input:focus {
   outline: none; border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-dim);
+  background: var(--bg-base);
 }
 .add-role-row input::placeholder { color: var(--text-muted); }
 
-/* ═══ Role Colors (dark theme) ═══ */
-.role-color-0 { background: rgba(96,165,250,0.15); color: #60a5fa; }
-.role-color-1 { background: rgba(251,146,60,0.15); color: #fb923c; }
-.role-color-2 { background: rgba(74,222,128,0.15); color: #4ade80; }
-.role-color-3 { background: rgba(192,132,252,0.15); color: #c084fc; }
-.role-color-4 { background: rgba(248,113,113,0.15); color: #f87171; }
-.role-color-5 { background: rgba(34,211,238,0.15); color: #22d3ee; }
-.role-color-6 { background: rgba(250,204,21,0.15); color: #facc15; }
-.role-color-7 { background: rgba(244,114,182,0.15); color: #f472b6; }
+/* ═══ Role Colors (light theme) ═══ */
+.role-color-0 { background: #e3f2fd; color: #1565c0; }
+.role-color-1 { background: #fff3e0; color: #e65100; }
+.role-color-2 { background: #e8f5e9; color: #2e7d32; }
+.role-color-3 { background: #f3e5f5; color: #7b1fa2; }
+.role-color-4 { background: #fce4ec; color: #c62828; }
+.role-color-5 { background: #e0f7fa; color: #00838f; }
+.role-color-6 { background: #fff8e1; color: #f57f17; }
+.role-color-7 { background: #efebe9; color: #4e342e; }
 
 /* ═══ Cue Table ═══ */
 .cue-section {
@@ -291,6 +298,7 @@ body::before {
   border-radius: var(--radius-lg);
   padding: 24px;
   overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .cue-section h2 {
   font-size: 11px; font-weight: 500; margin-bottom: 16px;
@@ -331,10 +339,11 @@ table.cue-table {
 .cue-table input:focus, .cue-table textarea:focus {
   outline: none;
   border-color: var(--accent-medium);
-  background: var(--bg-elevated);
+  background: var(--bg-base);
+  box-shadow: 0 0 0 2px var(--accent-dim);
 }
 .cue-table input:hover, .cue-table textarea:hover {
-  background: rgba(255,255,255,0.03);
+  background: var(--bg-elevated);
 }
 .cue-table input::placeholder, .cue-table textarea::placeholder {
   color: var(--text-muted);
@@ -393,8 +402,8 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
 /* ═══ Modals ═══ */
 .modal-overlay {
   display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(8px);
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(6px);
   z-index: 1000;
   justify-content: center; align-items: center;
 }
@@ -404,7 +413,7 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   padding: 32px; width: 420px; max-width: 90vw;
-  box-shadow: 0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px var(--border);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.15), 0 0 0 1px var(--border);
 }
 .modal h3 {
   font-size: 16px; font-weight: 600; margin-bottom: 20px;
@@ -419,7 +428,7 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
   padding: 8px 12px; border-radius: var(--radius);
   transition: background 0.2s; color: var(--text-primary);
 }
-.modal-roles label:hover { background: var(--bg-hover); }
+.modal-roles label:hover { background: var(--bg-elevated); }
 .modal-roles input[type="checkbox"] {
   width: 16px; height: 16px; accent-color: var(--accent);
 }
@@ -433,10 +442,10 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
 .event-card { animation: fadeIn 0.4s ease both; }
 .event-card:nth-child(1) { animation-delay: 0s; }
 .event-card:nth-child(2) { animation-delay: 0.05s; }
-.event-card:nth-child(3) { animation-delay: 0.1s; }
-.event-card:nth-child(4) { animation-delay: 0.15s; }
-.event-card:nth-child(5) { animation-delay: 0.2s; }
-.event-card:nth-child(6) { animation-delay: 0.25s; }
+.event-card:nth-child(3) { animation-delay: 0.05s; }
+.event-card:nth-child(4) { animation-delay: 0.1s; }
+.event-card:nth-child(5) { animation-delay: 0.15s; }
+.event-card:nth-child(6) { animation-delay: 0.2s; }
 
 /* ═══ Print ═══ */
 @media print {
@@ -444,10 +453,9 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
   .header { display: none; }
   .container { padding: 0; }
   .event-info, .roles-section, .cue-section {
-    background: #fff; border-color: #ddd; color: #333;
+    box-shadow: none; border-color: #ddd;
   }
-  .cue-table input, .cue-table textarea { color: #333; }
-  .cue-table th { background: #f0f0f0; color: #333; }
+  .cue-table th { background: #f0f0f0; }
 }
 
 /* ═══ Mobile ═══ */
@@ -557,18 +565,18 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
 // ============ State ============
 let currentEventId = null;
 let state = null;
-let undoStack = [];  // undo history (max 50 snapshots)
+let undoStack = [];
 const MAX_UNDO = 50;
 
 const ROLE_COLORS = [
-  { bg: 'rgba(96,165,250,0.15)', fg: '#60a5fa' },
-  { bg: 'rgba(251,146,60,0.15)', fg: '#fb923c' },
-  { bg: 'rgba(74,222,128,0.15)', fg: '#4ade80' },
-  { bg: 'rgba(192,132,252,0.15)', fg: '#c084fc' },
-  { bg: 'rgba(248,113,113,0.15)', fg: '#f87171' },
-  { bg: 'rgba(34,211,238,0.15)', fg: '#22d3ee' },
-  { bg: 'rgba(250,204,21,0.15)', fg: '#facc15' },
-  { bg: 'rgba(244,114,182,0.15)', fg: '#f472b6' },
+  { bg: '#e3f2fd', fg: '#1565c0' },
+  { bg: '#fff3e0', fg: '#e65100' },
+  { bg: '#e8f5e9', fg: '#2e7d32' },
+  { bg: '#f3e5f5', fg: '#7b1fa2' },
+  { bg: '#fce4ec', fg: '#c62828' },
+  { bg: '#e0f7fa', fg: '#00838f' },
+  { bg: '#fff8e1', fg: '#f57f17' },
+  { bg: '#efebe9', fg: '#4e342e' },
 ];
 const PDF_ROLE_COLORS = [
   [30,136,229],[230,81,0],[46,125,50],[123,31,162],
@@ -646,7 +654,6 @@ function normalizeState() {
   state.rows.forEach(row => {
     if (!row.notes) row.notes = {};
     if (!row.isSection) {
-      // Ensure all roles have entries in notes
       state.roles.forEach(role => {
         if (!(role in row.notes)) row.notes[role] = '';
       });
@@ -778,7 +785,7 @@ function renderBody() {
       html += `<tr draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event)" ondragenter="onDragEnter(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,${i})" ondragend="onDragEnd(event)" style="background:var(--bg-elevated);">`;
       html += `<td colspan="${colspan}" style="padding:10px 12px;font-weight:600;font-size:13px;color:var(--accent);border-left:3px solid var(--accent);">`;
       html += `<span class="drag-handle" title="拖曳排序">&#x2630;</span> `;
-      html += `<input value="${esc(row.sectionLabel)}" placeholder="段落名稱（例：彩排、正式演出）" style="font-weight:600;font-size:13px;color:var(--accent);width:calc(100% - 100px);background:transparent;border:1px solid transparent;padding:4px 8px;border-radius:4px;font-family:var(--font-ui);" onfocus="this.style.borderColor='var(--accent-medium)';this.style.background='var(--bg-surface)'" onblur="this.style.borderColor='transparent';this.style.background='transparent'" oninput="state.rows[${i}].sectionLabel=this.value;autoSave()">`;
+      html += `<input value="${esc(row.sectionLabel)}" placeholder="段落名稱（例：彩排、正式演出）" style="font-weight:600;font-size:13px;color:var(--accent);width:calc(100% - 100px);background:transparent;border:1px solid transparent;padding:4px 8px;border-radius:4px;font-family:var(--font-ui);" onfocus="this.style.borderColor='var(--accent-medium)';this.style.background='var(--bg-base)'" onblur="this.style.borderColor='transparent';this.style.background='transparent'" oninput="state.rows[${i}].sectionLabel=this.value;autoSave()">`;
       html += `<span style="float:right;">`;
       html += `<button class="insert-btn" onclick="insertRow(${i})" title="在下方插入">&#x2795;</button>`;
       html += `<button style="background:none;border:none;cursor:pointer;opacity:0.4;font-size:14px;color:var(--danger);transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'" onclick="deleteRow(${i})">&#x1f5d1;</button>`;
@@ -940,30 +947,20 @@ async function generatePDF() {
     headerStyles[4 + i] = { fillColor: PDF_ROLE_COLORS[gi % PDF_ROLE_COLORS.length], textColor: [255,255,255] };
   });
 
-  // Dynamic column width calculation
-  const margin = 10; // tighter margins for more space
+  const margin = 10;
   const tableW = pageW - margin * 2;
   const roleCount = selectedRoles.length;
-
-  // Fixed columns: #=6, time=14, duration=10
   const numW = 6, timeW = 14, durW = 10;
   const fixedW = numW + timeW + durW;
-
-  // Item column: give it proportional space but not too much
   const remainForContent = tableW - fixedW;
   const itemW = Math.max(24, Math.min(40, remainForContent * 0.12));
-
-  // Role columns: distribute remaining space, weighted by content length
   const remainForRoles = remainForContent - itemW;
   const roleW = Math.max(18, remainForRoles / roleCount);
   const roleColStyles = {};
   for (let i = 0; i < roleCount; i++) { roleColStyles[4 + i] = { cellWidth: roleW }; }
 
-  // Adaptive font size: shrink when many columns
   const baseFontSize = roleCount >= 7 ? 6.5 : roleCount >= 5 ? 7 : 7.5;
   const headerFontSize = baseFontSize + 0.5;
-
-  // Max row height: prevent single rows from spanning pages
   const maxRowH = isLandscape ? 45 : 55;
 
   doc.autoTable({
@@ -973,7 +970,6 @@ async function generatePDF() {
     columnStyles: { 0: { cellWidth: numW, halign: 'center' }, 1: { cellWidth: timeW }, 2: { cellWidth: durW, halign: 'center' }, 3: { cellWidth: itemW }, ...roleColStyles },
     didParseCell: function(data) {
       if (data.section === 'head' && headerStyles[data.column.index]) Object.assign(data.cell.styles, headerStyles[data.column.index]);
-      // Clamp row height: truncate overflowing text with ellipsis indicator
       if (data.section === 'body' && data.cell.text && Array.isArray(data.cell.text)) {
         const lineH = baseFontSize * 0.45;
         const maxLines = Math.floor((maxRowH - 3) / lineH);
@@ -1022,7 +1018,6 @@ async function undo() {
   renderRoles();
   renderTable();
   updateUndoBtn();
-  // Save the restored state to server (without pushing to undo)
   await api('PUT', '/events/' + currentEventId, state);
   const ind = document.getElementById('saveIndicator');
   ind.textContent = 'RESTORED';
@@ -1030,12 +1025,10 @@ async function undo() {
   setTimeout(() => { ind.textContent = 'SAVING'; ind.classList.remove('saved'); }, 1500);
 }
 
-// Ctrl+Z / Cmd+Z shortcut for undo
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-    // Only intercept if not focused on an input/textarea
     const tag = document.activeElement?.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA') return; // let browser handle native undo
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     e.preventDefault();
     undo();
   }
