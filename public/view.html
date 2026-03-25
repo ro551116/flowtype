@@ -110,6 +110,22 @@ body::before {
   border-left: 3px solid var(--accent);
 }
 
+/* Instruction row */
+.instruction-row { background: rgba(59,130,246,0.04) !important; }
+.instruction-row td {
+  font-size: 13px; color: #3b82f6;
+  padding: 8px 16px; border-bottom: 1px solid rgba(59,130,246,0.15);
+  border-left: 3px solid #3b82f6;
+}
+
+/* Custom fields in header */
+.custom-fields {
+  font-size: 11px; color: var(--text-secondary);
+  font-family: var(--font-mono);
+  display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;
+  margin-top: 8px;
+}
+
 /* Column sizing */
 .col-num { width: 36px; text-align: center; color: var(--text-muted); font-size: 11px; font-family: var(--font-mono); }
 .col-time { width: 70px; white-space: nowrap; font-weight: 500; font-family: var(--font-mono); font-size: 12px; }
@@ -159,6 +175,7 @@ body::before {
 <div class="view-header" id="header">
   <h1 id="title">載入中...</h1>
   <div class="meta" id="meta"></div>
+  <div class="custom-fields" id="customFields"></div>
 </div>
 <div class="role-bar" id="roleBar"></div>
 <div class="view-container">
@@ -191,6 +208,16 @@ async function load() {
   if (data.event.contact) meta.push('聯絡人：' + esc(data.event.contact));
   if (data.event.phone) meta.push('電話：' + data.event.phone);
   document.getElementById('meta').innerHTML = meta.map(m => '<span>' + m + '</span>').join('');
+
+  // Custom fields
+  if (data.customFields && data.customFields.length > 0) {
+    const cf = data.customFields.filter(f => f.label && f.value);
+    if (cf.length) {
+      document.getElementById('customFields').innerHTML = cf.map(f =>
+        '<span>' + esc(f.label) + '：' + esc(f.value) + '</span>'
+      ).join('');
+    }
+  }
 
   visibleRoles = new Set(data.roles);
   renderRoleBar();
@@ -233,6 +260,10 @@ function renderTable() {
   data.rows.forEach(row => {
     if (row.isSection) {
       bhtml += `<tr class="section-row"><td colspan="${colspan}">${esc(row.sectionLabel)}</td></tr>`;
+      return;
+    }
+    if (row.isInstruction) {
+      bhtml += `<tr class="instruction-row"><td colspan="${colspan}">【${esc(row.instructionText)}】</td></tr>`;
       return;
     }
 

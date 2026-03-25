@@ -291,6 +291,58 @@ body::before {
 .role-color-6 { background: #fff8e1; color: #f57f17; }
 .role-color-7 { background: #efebe9; color: #4e342e; }
 
+/* ═══ Custom Fields Section ═══ */
+.custom-fields-section {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid #0891b2;
+  border-radius: 2px var(--radius-lg) var(--radius-lg) 2px;
+  padding: 24px 24px 24px 28px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.custom-fields-section h2 {
+  font-size: 11px; font-weight: 500; margin-bottom: 16px;
+  color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.custom-field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+}
+.custom-field-item {
+  display: flex; gap: 8px; align-items: center;
+}
+.cf-label {
+  width: 100px; flex-shrink: 0;
+  padding: 8px 10px;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px; font-weight: 500; font-family: var(--font-ui);
+  color: var(--text-primary);
+}
+.cf-value {
+  flex: 1;
+  padding: 8px 10px;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px; font-family: var(--font-ui);
+  color: var(--text-primary);
+}
+.cf-label:focus, .cf-value:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+  background: var(--bg-base);
+}
+.cf-label::placeholder, .cf-value::placeholder { color: var(--text-muted); }
+.cf-remove {
+  background: none; border: none; cursor: pointer;
+  color: var(--text-muted); font-size: 16px;
+  opacity: 0.3; transition: opacity 0.2s; padding: 4px;
+}
+.cf-remove:hover { opacity: 1; color: var(--danger); }
+
 /* ═══ Cue Table ═══ */
 .cue-section {
   background: var(--bg-surface);
@@ -514,6 +566,13 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
         <button class="btn btn-secondary btn-sm" onclick="addRole()">+ 新增</button>
       </div>
     </div>
+    <div class="custom-fields-section">
+      <h2>自訂欄位 <span style="font-weight:300;font-size:10px;color:var(--text-muted);text-transform:none;letter-spacing:0;">人員 · 廠商 · 備忘</span></h2>
+      <div class="custom-field-grid" id="customFieldGrid"></div>
+      <div style="margin-top:12px;">
+        <button class="btn btn-secondary btn-sm" onclick="addCustomField()">+ 新增欄位</button>
+      </div>
+    </div>
     <div class="cue-section">
       <h2>流程表</h2>
       <div class="cue-table-wrapper">
@@ -525,6 +584,7 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
       <div class="add-row-btn">
         <button class="btn btn-success btn-sm" onclick="addRow()">+ 新增項目</button>
         <button class="btn btn-secondary btn-sm" onclick="addSectionRow()">+ 新增段落分隔</button>
+        <button class="btn btn-secondary btn-sm" onclick="addInstructionRow()" style="color:#3b82f6;">+ 新增指示行</button>
       </div>
     </div>
   </div>
@@ -651,14 +711,48 @@ function normalizeState() {
   if (!state) return;
   if (!state.roles) state.roles = [];
   if (!state.rows) state.rows = [];
+  if (!state.customFields) state.customFields = [];
   state.rows.forEach(row => {
     if (!row.notes) row.notes = {};
-    if (!row.isSection) {
+    if (!row.isSection && !row.isInstruction) {
       state.roles.forEach(role => {
         if (!(role in row.notes)) row.notes[role] = '';
       });
     }
   });
+}
+
+// ============ Custom Fields ============
+function renderCustomFields() {
+  const grid = document.getElementById('customFieldGrid');
+  if (!state.customFields || state.customFields.length === 0) {
+    grid.innerHTML = '<p style="color:var(--text-muted);font-size:12px;">尚未新增自訂欄位</p>';
+    return;
+  }
+  grid.innerHTML = state.customFields.map((f, i) => `
+    <div class="custom-field-item">
+      <input class="cf-label" value="${esc(f.label)}" placeholder="欄位名稱" oninput="updateCustomField(${i},'label',this.value)">
+      <input class="cf-value" value="${esc(f.value)}" placeholder="內容" oninput="updateCustomField(${i},'value',this.value)">
+      <button class="cf-remove" onclick="removeCustomField(${i})" title="刪除">&times;</button>
+    </div>
+  `).join('');
+}
+
+function addCustomField() {
+  state.customFields.push({ label: '', value: '' });
+  renderCustomFields();
+  autoSave();
+}
+
+function removeCustomField(idx) {
+  state.customFields.splice(idx, 1);
+  renderCustomFields();
+  autoSave();
+}
+
+function updateCustomField(idx, key, value) {
+  state.customFields[idx][key] = value;
+  autoSave();
 }
 
 // ============ Editor Page ============
@@ -674,6 +768,7 @@ async function openEvent(id) {
   document.getElementById('btnExportPDF').style.display = 'inline-block';
   history.pushState({}, '', '/?id=' + id);
   syncEventFields();
+  renderCustomFields();
   renderRoles();
   renderTable();
 }
@@ -744,7 +839,7 @@ function addRole() {
   state.roles.push(name);
   state.rows.forEach(r => {
     if (!r.notes) r.notes = {};
-    if (!r.isSection) r.notes[name] = '';
+    if (!r.isSection && !r.isInstruction) r.notes[name] = '';
   });
   input.value = '';
   renderRoles();
@@ -790,6 +885,18 @@ function renderBody() {
       html += `<button class="insert-btn" onclick="insertRow(${i})" title="在下方插入">&#x2795;</button>`;
       html += `<button style="background:none;border:none;cursor:pointer;opacity:0.4;font-size:14px;color:var(--danger);transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'" onclick="deleteRow(${i})">&#x1f5d1;</button>`;
       html += `</span></td></tr>`;
+    } else if (row.isInstruction) {
+      const colspan = 4 + state.roles.length + 1;
+      html += `<tr draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event)" ondragenter="onDragEnter(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,${i})" ondragend="onDragEnd(event)" style="background:rgba(59,130,246,0.05);">`;
+      html += `<td colspan="${colspan}" style="padding:8px 12px;font-size:13px;color:#3b82f6;border-left:3px solid #3b82f6;">`;
+      html += `<span class="drag-handle" title="拖曳排序">&#x2630;</span> `;
+      html += `<span style="opacity:0.4;font-weight:600;">【</span>`;
+      html += `<input value="${esc(row.instructionText)}" placeholder="指示/備忘內容（例：新娘換裝，造型時間 25 分鐘）" style="font-size:13px;color:#3b82f6;width:calc(100% - 130px);background:transparent;border:1px solid transparent;padding:4px 8px;border-radius:4px;font-family:var(--font-ui);" onfocus="this.style.borderColor='rgba(59,130,246,0.3)';this.style.background='var(--bg-base)'" onblur="this.style.borderColor='transparent';this.style.background='transparent'" oninput="state.rows[${i}].instructionText=this.value;autoSave()">`;
+      html += `<span style="opacity:0.4;font-weight:600;">】</span>`;
+      html += `<span style="float:right;">`;
+      html += `<button class="insert-btn" onclick="insertRow(${i})" title="在下方插入">&#x2795;</button>`;
+      html += `<button style="background:none;border:none;cursor:pointer;opacity:0.4;font-size:14px;color:var(--danger);transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'" onclick="deleteRow(${i})">&#x1f5d1;</button>`;
+      html += `</span></td></tr>`;
     } else {
       html += `<tr draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event)" ondragenter="onDragEnter(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,${i})" ondragend="onDragEnd(event)">`;
       html += `<td class="col-num" style="color:var(--text-muted);font-size:11px;font-family:var(--font-mono);"><span class="drag-handle" title="拖曳排序">&#x2630;</span> ${num++}</td>`;
@@ -815,14 +922,17 @@ function esc(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function createEmptyRow(isSection = false) {
+function createEmptyRow(type = 'item') {
+  if (type === 'section') return { isSection: true, sectionLabel: '', isInstruction: false };
+  if (type === 'instruction') return { isSection: false, isInstruction: true, instructionText: '' };
   const notes = {};
   state.roles.forEach(r => notes[r] = '');
-  return { time: '', duration: '', item: '', notes, isSection, sectionLabel: '' };
+  return { time: '', duration: '', item: '', notes, isSection: false, isInstruction: false, sectionLabel: '' };
 }
 
 function addRow() { state.rows.push(createEmptyRow()); renderBody(); autoSave(); }
-function addSectionRow() { state.rows.push(createEmptyRow(true)); renderBody(); autoSave(); }
+function addSectionRow() { state.rows.push(createEmptyRow('section')); renderBody(); autoSave(); }
+function addInstructionRow() { state.rows.push(createEmptyRow('instruction')); renderBody(); autoSave(); }
 function insertRow(afterIdx) {
   state.rows.splice(afterIdx + 1, 0, createEmptyRow());
   renderBody();
@@ -926,6 +1036,15 @@ async function generatePDF() {
   if (state.event.contact) parts.push(`聯絡人：${state.event.contact}`);
   if (state.event.phone) parts.push(`電話：${state.event.phone}`);
   if (parts.length) { doc.text(parts.join('   '), pageW / 2, infoY, { align: 'center' }); infoY += 4; }
+  // Custom fields in PDF header
+  if (state.customFields && state.customFields.length > 0) {
+    const cfItems = state.customFields.filter(f => f.label && f.value);
+    for (let j = 0; j < cfItems.length; j += 4) {
+      const line = cfItems.slice(j, j + 4).map(f => `${f.label}：${f.value}`).join('   ');
+      doc.text(line, pageW / 2, infoY, { align: 'center' });
+      infoY += 3.5;
+    }
+  }
   doc.setTextColor(0);
 
   const headers = ['#', '時間', '時長', '項目', ...selectedRoles];
@@ -934,6 +1053,8 @@ async function generatePDF() {
   state.rows.forEach(row => {
     if (row.isSection) {
       bodyData.push([{ content: row.sectionLabel || '---', colSpan: headers.length, styles: { fontStyle: 'bold', fillColor: [230,232,238], textColor: [26,26,46], fontSize: 8, cellPadding: 1.5, font: 'NotoSansTC' } }]);
+    } else if (row.isInstruction) {
+      bodyData.push([{ content: '【' + (row.instructionText || '') + '】', colSpan: headers.length, styles: { fontStyle: 'italic', fillColor: [230,240,255], textColor: [59,130,246], fontSize: 7.5, cellPadding: 1.5, font: 'NotoSansTC' } }]);
     } else {
       const r = [num++, row.time || '', row.duration || '', row.item || ''];
       selectedRoles.forEach(role => r.push((row.notes && row.notes[role]) || ''));
