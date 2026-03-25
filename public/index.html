@@ -594,8 +594,21 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
 <div class="modal-overlay" id="exportModal">
   <div class="modal">
     <h3>匯出 PDF</h3>
-    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">選擇要顯示的角色欄位：</p>
-    <div class="modal-roles" id="modalRoles"></div>
+    <div style="display:flex;gap:6px;margin-bottom:16px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:6px 14px;border-radius:var(--radius);border:1px solid var(--border);color:var(--text-primary);transition:all 0.2s;">
+        <input type="radio" name="exportType" value="full" checked onchange="onExportTypeChange()" style="accent-color:var(--accent);"> 完整版
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:6px 14px;border-radius:var(--radius);border:1px solid var(--border);color:var(--text-primary);transition:all 0.2s;">
+        <input type="radio" name="exportType" value="master" onchange="onExportTypeChange()" style="accent-color:var(--accent);"> 流程大表
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:6px 14px;border-radius:var(--radius);border:1px solid var(--border);color:var(--text-primary);transition:all 0.2s;">
+        <input type="radio" name="exportType" value="cue" onchange="onExportTypeChange()" style="accent-color:var(--accent);"> Cue 表
+      </label>
+    </div>
+    <div id="roleSelectSection">
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px;" id="roleSelectLabel">選擇要顯示的角色欄位：</p>
+      <div class="modal-roles" id="modalRoles"></div>
+    </div>
     <div style="margin-bottom:16px;">
       <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;color:var(--text-primary);">
         <input type="checkbox" id="landscapeCheck" style="width:16px;height:16px;accent-color:var(--accent);">
@@ -1003,7 +1016,22 @@ function openExportModal() {
 function closeExportModal() { document.getElementById('exportModal').classList.remove('active'); }
 function toggleAllRoles(cb) { document.querySelectorAll('.role-check').forEach(c => c.checked = cb.checked); }
 
+function onExportTypeChange() {
+  const type = document.querySelector('input[name="exportType"]:checked').value;
+  const section = document.getElementById('roleSelectSection');
+  const label = document.getElementById('roleSelectLabel');
+  if (type === 'master') {
+    section.style.display = 'none';
+  } else {
+    section.style.display = 'block';
+    label.textContent = type === 'cue' ? '選擇要產生 Cue 表的角色：' : '選擇要顯示的角色欄位：';
+  }
+}
+
 async function generatePDF() {
+  const exportType = document.querySelector('input[name="exportType"]:checked').value;
+  if (exportType === 'master') return generateMasterPDF();
+  if (exportType === 'cue') return generateCuePDF();
   readEventFields();
   const { jsPDF } = window.jspdf;
   const isLandscape = document.getElementById('landscapeCheck').checked;
@@ -1107,6 +1135,164 @@ async function generatePDF() {
   });
 
   const suffix = selectedRoles.length < state.roles.length ? `_${selectedRoles.join('_')}` : '';
+  doc.save(`${state.event.name || '活動流程表'}${suffix}.pdf`);
+  closeExportModal();
+}
+
+// ============ Master Flow PDF (流程大表) ============
+async function generateMasterPDF() {
+  readEventFields();
+  const { jsPDF } = window.jspdf;
+  const isLandscape = document.getElementById('landscapeCheck').checked;
+  const doc = new jsPDF({ orientation: isLandscape ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
+  await loadChineseFont(doc);
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+
+  doc.setFont('NotoSansTC', 'normal');
+  doc.setFontSize(16);
+  doc.text(state.event.name || '活動流程表', pageW / 2, 12, { align: 'center' });
+  doc.setFontSize(9); doc.setTextColor(100);
+  doc.text('流程大表', pageW / 2, 18, { align: 'center' });
+  doc.setTextColor(0);
+
+  let infoY = 22;
+  doc.setFontSize(8); doc.setTextColor(80);
+  const parts = [];
+  if (state.event.date) parts.push(`日期：${state.event.date}`);
+  if (state.event.venue) parts.push(`場地：${state.event.venue}`);
+  if (state.event.organizer) parts.push(`主辦：${state.event.organizer}`);
+  if (state.event.contact) parts.push(`聯絡人：${state.event.contact}`);
+  if (state.event.phone) parts.push(`電話：${state.event.phone}`);
+  if (parts.length) { doc.text(parts.join('   '), pageW / 2, infoY, { align: 'center' }); infoY += 4; }
+  if (state.customFields && state.customFields.length > 0) {
+    const cfItems = state.customFields.filter(f => f.label && f.value);
+    for (let j = 0; j < cfItems.length; j += 4) {
+      const line = cfItems.slice(j, j + 4).map(f => `${f.label}：${f.value}`).join('   ');
+      doc.text(line, pageW / 2, infoY, { align: 'center' });
+      infoY += 3.5;
+    }
+  }
+  doc.setTextColor(0);
+
+  const headers = ['#', '時間', '時長', '項目'];
+  const bodyData = [];
+  let num = 1;
+  state.rows.forEach(row => {
+    if (row.isSection) {
+      bodyData.push([{ content: row.sectionLabel || '---', colSpan: 4, styles: { fontStyle: 'bold', fillColor: [230,232,238], textColor: [26,26,46], fontSize: 9, cellPadding: 2, font: 'NotoSansTC' } }]);
+    } else if (row.isInstruction) {
+      bodyData.push([{ content: '【' + (row.instructionText || '') + '】', colSpan: 4, styles: { fontStyle: 'italic', fillColor: [230,240,255], textColor: [59,130,246], fontSize: 8, cellPadding: 1.5, font: 'NotoSansTC' } }]);
+    } else {
+      if (!row.item && !row.time) return; // skip empty rows
+      bodyData.push([num++, row.time || '', row.duration || '', row.item || '']);
+    }
+  });
+
+  const margin = 12;
+  const tableW = pageW - margin * 2;
+
+  doc.autoTable({
+    startY: infoY, head: [headers], body: bodyData, margin: { left: margin, right: margin, top: 8, bottom: 12 },
+    styles: { font: 'NotoSansTC', fontSize: 9, cellPadding: 2.5, lineWidth: 0.1, lineColor: [200,200,200], overflow: 'linebreak', valign: 'top' },
+    headStyles: { fillColor: [26,26,46], textColor: [255,255,255], fontSize: 10, fontStyle: 'bold', font: 'NotoSansTC', cellPadding: 2.5 },
+    columnStyles: { 0: { cellWidth: 8, halign: 'center' }, 1: { cellWidth: 22 }, 2: { cellWidth: 12, halign: 'center' }, 3: { cellWidth: tableW - 42 } },
+    didDrawPage: function() {
+      doc.setFontSize(7); doc.setTextColor(150); doc.setFont('NotoSansTC', 'normal');
+      doc.text(`${state.event.name || '活動流程表'} — 流程大表 — 第 ${doc.internal.getCurrentPageInfo().pageNumber} 頁`, pageW / 2, pageH - 6, { align: 'center' });
+    }
+  });
+
+  doc.save(`${state.event.name || '活動流程表'}_流程大表.pdf`);
+  closeExportModal();
+}
+
+// ============ Cue Sheet PDF (Cue 表) ============
+async function generateCuePDF() {
+  readEventFields();
+  const selectedRoles = [];
+  document.querySelectorAll('.role-check:checked').forEach(cb => selectedRoles.push(cb.value));
+  if (selectedRoles.length === 0) { alert('請至少選擇一個角色'); return; }
+
+  const { jsPDF } = window.jspdf;
+  const isLandscape = document.getElementById('landscapeCheck').checked;
+  const doc = new jsPDF({ orientation: isLandscape ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
+  await loadChineseFont(doc);
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 10;
+  const tableW = pageW - margin * 2;
+
+  for (let ri = 0; ri < selectedRoles.length; ri++) {
+    const role = selectedRoles[ri];
+    const gi = state.roles.indexOf(role);
+    const roleColor = PDF_ROLE_COLORS[gi % PDF_ROLE_COLORS.length];
+
+    if (ri > 0) doc.addPage();
+
+    doc.setFont('NotoSansTC', 'normal');
+    doc.setFontSize(14);
+    doc.text(state.event.name || '活動流程表', pageW / 2, 12, { align: 'center' });
+    doc.setFontSize(10);
+    doc.setTextColor(roleColor[0], roleColor[1], roleColor[2]);
+    doc.text(`${role} — CUE SHEET`, pageW / 2, 18, { align: 'center' });
+    doc.setTextColor(0);
+
+    let infoY = 22;
+    doc.setFontSize(8); doc.setTextColor(80);
+    const parts = [];
+    if (state.event.date) parts.push(`日期：${state.event.date}`);
+    if (state.event.venue) parts.push(`場地：${state.event.venue}`);
+    if (state.event.contact) parts.push(`聯絡人：${state.event.contact} ${state.event.phone || ''}`);
+    if (parts.length) { doc.text(parts.join('   '), pageW / 2, infoY, { align: 'center' }); infoY += 5; }
+    doc.setTextColor(0);
+
+    const headers = ['#', '時間', '項目', role];
+    const bodyData = [];
+    let num = 1;
+    state.rows.forEach(row => {
+      if (row.isSection) {
+        bodyData.push([{ content: row.sectionLabel || '---', colSpan: 4, styles: { fontStyle: 'bold', fillColor: [230,232,238], textColor: [26,26,46], fontSize: 8.5, cellPadding: 2, font: 'NotoSansTC' } }]);
+      } else if (row.isInstruction) {
+        bodyData.push([{ content: '【' + (row.instructionText || '') + '】', colSpan: 4, styles: { fontStyle: 'italic', fillColor: [230,240,255], textColor: [59,130,246], fontSize: 7.5, cellPadding: 1.5, font: 'NotoSansTC' } }]);
+      } else {
+        const note = (row.notes && row.notes[role]) || '';
+        // Skip rows where this role has no notes AND no item
+        if (!note && !row.item && !row.time) return;
+        bodyData.push([num++, row.time || '', row.item || '', note]);
+      }
+    });
+
+    const noteW = Math.max(tableW * 0.4, 60);
+    const itemW = tableW - 8 - 18 - noteW;
+
+    doc.autoTable({
+      startY: infoY, head: [headers], body: bodyData, margin: { left: margin, right: margin, top: 8, bottom: 12 },
+      styles: { font: 'NotoSansTC', fontSize: 8.5, cellPadding: 2, lineWidth: 0.1, lineColor: [200,200,200], overflow: 'linebreak', valign: 'top' },
+      headStyles: { fillColor: [26,26,46], textColor: [255,255,255], fontSize: 9, fontStyle: 'bold', font: 'NotoSansTC', cellPadding: 2 },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 18 },
+        2: { cellWidth: itemW },
+        3: { cellWidth: noteW, fillColor: [roleColor[0], roleColor[1], roleColor[2], 0.06] }
+      },
+      didParseCell: function(data) {
+        // Tint the role column header
+        if (data.section === 'head' && data.column.index === 3) {
+          data.cell.styles.fillColor = roleColor;
+          data.cell.styles.textColor = [255,255,255];
+        }
+      },
+      didDrawPage: function() {
+        doc.setFontSize(7); doc.setTextColor(150); doc.setFont('NotoSansTC', 'normal');
+        doc.text(`${state.event.name || '活動流程表'} — ${role} Cue Sheet — 第 ${doc.internal.getCurrentPageInfo().pageNumber} 頁`, pageW / 2, pageH - 6, { align: 'center' });
+      }
+    });
+  }
+
+  const suffix = selectedRoles.length === 1 ? `_${selectedRoles[0]}_CUE` : '_CUE';
   doc.save(`${state.event.name || '活動流程表'}${suffix}.pdf`);
   closeExportModal();
 }
