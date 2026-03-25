@@ -1276,7 +1276,7 @@ async function generateCuePDF() {
         0: { cellWidth: 8, halign: 'center' },
         1: { cellWidth: 18 },
         2: { cellWidth: itemW },
-        3: { cellWidth: noteW, fillColor: [roleColor[0], roleColor[1], roleColor[2], 0.06] }
+        3: { cellWidth: noteW, fillColor: [Math.round(roleColor[0]*0.08+255*0.92), Math.round(roleColor[1]*0.08+255*0.92), Math.round(roleColor[2]*0.08+255*0.92)] }
       },
       didParseCell: function(data) {
         // Tint the role column header

@@ -63,12 +63,30 @@ body::before {
   display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;
 }
 
-/* Role filter bar */
-.role-bar {
-  background: var(--bg-base); padding: 12px 32px;
-  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center;
+/* Mode & Role bar */
+.toolbar {
+  background: var(--bg-base); padding: 10px 32px;
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center;
   border-bottom: 1px solid var(--border);
   position: sticky; top: 0; z-index: 100;
+}
+.mode-btns {
+  display: flex; gap: 0; border: 1px solid var(--border-light); border-radius: 6px; overflow: hidden;
+}
+.mode-btn {
+  background: var(--bg-base); border: none; padding: 5px 14px;
+  font-size: 11px; font-weight: 500; font-family: var(--font-ui);
+  color: var(--text-muted); cursor: pointer; transition: all 0.2s;
+  border-right: 1px solid var(--border);
+}
+.mode-btn:last-child { border-right: none; }
+.mode-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+.mode-btn.active { background: var(--accent); color: #fff; }
+.mode-sep {
+  width: 1px; height: 20px; background: var(--border-light);
+}
+.role-bar {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
 }
 .role-bar label {
   display: flex; align-items: center; gap: 6px;
@@ -77,7 +95,7 @@ body::before {
   transition: all 0.2s; user-select: none;
 }
 .role-bar label:hover { filter: brightness(0.95); }
-.role-bar input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--accent); }
+.role-bar input[type="checkbox"], .role-bar input[type="radio"] { width: 14px; height: 14px; accent-color: var(--accent); }
 
 /* Table */
 .view-container { max-width: 1600px; margin: 0 auto; padding: 0; position: relative; z-index: 1; }
@@ -177,7 +195,15 @@ body::before {
   <div class="meta" id="meta"></div>
   <div class="custom-fields" id="customFields"></div>
 </div>
-<div class="role-bar" id="roleBar"></div>
+<div class="toolbar">
+  <div class="mode-btns">
+    <button class="mode-btn active" id="modeFullBtn" onclick="setMode('full')">完整</button>
+    <button class="mode-btn" id="modeMasterBtn" onclick="setMode('master')">大表</button>
+    <button class="mode-btn" id="modeCueBtn" onclick="setMode('cue')">Cue</button>
+  </div>
+  <div class="mode-sep"></div>
+  <div class="role-bar" id="roleBar"></div>
+</div>
 <div class="view-container">
   <table class="flow-table" id="flowTable">
     <thead id="thead"></thead>
@@ -189,6 +215,8 @@ body::before {
 const ROLE_COLORS = 8;
 let data = null;
 let visibleRoles = new Set();
+let viewMode = 'full'; // 'full', 'master', 'cue'
+let cueRole = null;
 
 function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
 
@@ -220,6 +248,24 @@ async function load() {
   }
 
   visibleRoles = new Set(data.roles);
+
+  // URL params for mode
+  const params = new URLSearchParams(location.search);
+  if (params.get('mode') === 'master' || params.get('mode') === 'cue') {
+    viewMode = params.get('mode');
+    if (viewMode === 'cue' && params.get('role')) cueRole = params.get('role');
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('mode' + viewMode.charAt(0).toUpperCase() + viewMode.slice(1) + 'Btn').classList.add('active');
+  }
+
+  renderRoleBar();
+  renderTable();
+}
+
+function setMode(mode) {
+  viewMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode' + mode.charAt(0).toUpperCase() + mode.slice(1) + 'Btn').classList.add('active');
   renderRoleBar();
   renderTable();
 }
@@ -227,11 +273,29 @@ async function load() {
 function renderRoleBar() {
   const bar = document.getElementById('roleBar');
   bar.innerHTML = '';
+  if (viewMode === 'master') {
+    bar.innerHTML = '<span style="font-size:11px;color:var(--text-muted);">僅顯示 #／時間／時長／項目</span>';
+    return;
+  }
+  if (viewMode === 'cue') {
+    if (!cueRole && data.roles.length > 0) cueRole = data.roles[0];
+    data.roles.forEach((role, i) => {
+      const ci = i % ROLE_COLORS;
+      const lbl = document.createElement('label');
+      lbl.className = 'rh-' + ci;
+      const checked = role === cueRole ? 'checked' : '';
+      lbl.innerHTML = `<input type="radio" name="cueRole" ${checked} data-role="${esc(role)}" onchange="selectCueRole(this)"> ${esc(role)}`;
+      bar.appendChild(lbl);
+    });
+    return;
+  }
+  // full mode
   data.roles.forEach((role, i) => {
     const ci = i % ROLE_COLORS;
     const lbl = document.createElement('label');
     lbl.className = 'rh-' + ci;
-    lbl.innerHTML = `<input type="checkbox" checked data-role="${esc(role)}" onchange="toggleRole(this)"> ${esc(role)}`;
+    const checked = visibleRoles.has(role) ? 'checked' : '';
+    lbl.innerHTML = `<input type="checkbox" ${checked} data-role="${esc(role)}" onchange="toggleRole(this)"> ${esc(role)}`;
     bar.appendChild(lbl);
   });
 }
@@ -242,7 +306,16 @@ function toggleRole(cb) {
   renderTable();
 }
 
+function selectCueRole(rb) {
+  cueRole = rb.dataset.role;
+  renderTable();
+}
+
 function renderTable() {
+  if (viewMode === 'master') return renderMasterTable();
+  if (viewMode === 'cue') return renderCueTable();
+
+  // Full mode
   const roles = data.roles.filter(r => visibleRoles.has(r));
 
   let hhtml = '<tr><th class="col-num">#</th><th class="col-time">時間</th><th class="col-dur">時長</th><th class="col-item">項目</th>';
@@ -283,6 +356,58 @@ function renderTable() {
     bhtml += '</tr>';
   });
 
+  document.getElementById('tbody').innerHTML = bhtml;
+}
+
+function renderMasterTable() {
+  document.getElementById('thead').innerHTML = '<tr><th class="col-num">#</th><th class="col-time">時間</th><th class="col-dur">時長</th><th class="col-item" style="min-width:300px;">項目</th></tr>';
+  let bhtml = '';
+  let num = 1;
+  data.rows.forEach(row => {
+    if (row.isSection) {
+      bhtml += `<tr class="section-row"><td colspan="4">${esc(row.sectionLabel)}</td></tr>`;
+      return;
+    }
+    if (row.isInstruction) {
+      bhtml += `<tr class="instruction-row"><td colspan="4">【${esc(row.instructionText)}】</td></tr>`;
+      return;
+    }
+    if (!row.item && !row.time) return;
+    bhtml += '<tr>';
+    bhtml += `<td class="col-num">${num++}</td>`;
+    bhtml += `<td class="col-time">${esc(row.time)}</td>`;
+    bhtml += `<td class="col-dur">${row.duration ? row.duration + 'm' : ''}</td>`;
+    bhtml += `<td class="col-item">${esc(row.item).replace(/\n/g, '<br>')}</td>`;
+    bhtml += '</tr>';
+  });
+  document.getElementById('tbody').innerHTML = bhtml;
+}
+
+function renderCueTable() {
+  const role = cueRole || data.roles[0];
+  if (!role) return;
+  const ci = data.roles.indexOf(role) % ROLE_COLORS;
+  document.getElementById('thead').innerHTML = `<tr><th class="col-num">#</th><th class="col-time">時間</th><th class="col-item">項目</th><th class="col-note rc-${ci}" style="min-width:200px;">${esc(role)}</th></tr>`;
+  let bhtml = '';
+  let num = 1;
+  data.rows.forEach(row => {
+    if (row.isSection) {
+      bhtml += `<tr class="section-row"><td colspan="4">${esc(row.sectionLabel)}</td></tr>`;
+      return;
+    }
+    if (row.isInstruction) {
+      bhtml += `<tr class="instruction-row"><td colspan="4">【${esc(row.instructionText)}】</td></tr>`;
+      return;
+    }
+    const note = (row.notes && row.notes[role]) || '';
+    if (!note && !row.item && !row.time) return;
+    bhtml += '<tr>';
+    bhtml += `<td class="col-num">${num++}</td>`;
+    bhtml += `<td class="col-time">${esc(row.time)}</td>`;
+    bhtml += `<td class="col-item">${esc(row.item).replace(/\n/g, '<br>')}</td>`;
+    bhtml += `<td><div class="note-cell rc-${ci}">${esc(note).replace(/\n/g, '<br>')}</div></td>`;
+    bhtml += '</tr>';
+  });
   document.getElementById('tbody').innerHTML = bhtml;
 }
 
