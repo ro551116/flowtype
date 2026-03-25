@@ -6,222 +6,465 @@
 <title>活動流程表</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; background: #f0f2f5; color: #333; }
+/* ═══ Design Tokens ═══ */
+:root {
+  --bg-deep: #08080d;
+  --bg-base: #0e0e16;
+  --bg-surface: #151520;
+  --bg-elevated: #1c1c2a;
+  --bg-hover: #222235;
+  --accent: #e8a030;
+  --accent-dim: rgba(232,160,48,0.08);
+  --accent-medium: rgba(232,160,48,0.2);
+  --accent-glow: rgba(232,160,48,0.4);
+  --text-primary: #e4e4ec;
+  --text-secondary: #8888a0;
+  --text-muted: #50506a;
+  --border: rgba(255,255,255,0.06);
+  --border-light: rgba(255,255,255,0.1);
+  --success: #34d399;
+  --danger: #f87171;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --font-ui: 'Sora', -apple-system, 'Microsoft JhengHei', sans-serif;
+  --font-mono: 'Space Mono', 'SF Mono', monospace;
+}
 
+/* ═══ Reset & Base ═══ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font-ui);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ═══ Scrollbar ═══ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+
+/* ═══ Header ═══ */
 .header {
-  background: linear-gradient(135deg, #1a1a2e, #16213e);
-  color: #fff;
-  padding: 20px 32px;
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  height: 56px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: sticky; top: 0; z-index: 200;
 }
-.header h1 { font-size: 22px; font-weight: 600; cursor: pointer; }
+.header::after {
+  content: '';
+  position: absolute; bottom: -1px; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.6;
+}
+.header h1 {
+  font-size: 14px; font-weight: 600;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.3s;
+}
+.header h1:hover { color: var(--accent); }
+.header h1 span { color: var(--accent); font-weight: 700; }
 .header-actions { display: flex; gap: 10px; align-items: center; }
 
-.container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+/* ═══ Container ═══ */
+.container {
+  max-width: 1600px; margin: 0 auto;
+  padding: 32px;
+  position: relative; z-index: 1;
+}
 
-/* ===== Event List Page ===== */
+/* ═══ Buttons ═══ */
+.btn {
+  padding: 8px 18px; border: none; border-radius: var(--radius);
+  font-size: 12px; font-weight: 500; font-family: var(--font-ui);
+  cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px;
+}
+.btn-primary {
+  background: var(--accent); color: var(--bg-deep);
+}
+.btn-primary:hover { background: #f0b040; box-shadow: 0 0 20px rgba(232,160,48,0.3); }
+.btn-secondary {
+  background: var(--bg-elevated); color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+}
+.btn-secondary:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--accent-medium); }
+.btn-success {
+  background: rgba(52,211,153,0.15); color: var(--success);
+  border: 1px solid rgba(52,211,153,0.3);
+}
+.btn-success:hover { background: rgba(52,211,153,0.25); }
+.btn-sm { padding: 6px 12px; font-size: 11px; }
+
+/* ═══ Event List Page ═══ */
 .event-list-page { display: block; }
 .event-editor-page { display: none; }
 
-.list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.list-header h2 { font-size: 20px; color: #1a1a2e; }
-
-.event-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
-.event-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  cursor: pointer;
-  transition: all 0.2s;
-  position: relative;
+.list-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 28px;
 }
-.event-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.12); transform: translateY(-2px); }
-.event-card h3 { font-size: 16px; margin-bottom: 8px; color: #1a1a2e; }
-.event-card .meta { font-size: 13px; color: #888; display: flex; flex-direction: column; gap: 4px; }
+.list-header h2 {
+  font-size: 13px; font-weight: 500;
+  color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.event-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+.event-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  position: relative;
+  overflow: hidden;
+}
+.event-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.event-card:hover {
+  border-color: var(--accent-medium);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px var(--accent-medium);
+}
+.event-card:hover::before { opacity: 1; }
+.event-card h3 {
+  font-size: 15px; font-weight: 600; margin-bottom: 10px;
+  color: var(--text-primary);
+}
+.event-card .meta {
+  font-size: 12px; color: var(--text-muted);
+  display: flex; flex-direction: column; gap: 4px;
+  font-family: var(--font-mono); font-size: 11px;
+}
 .event-card .card-actions {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  display: flex;
-  gap: 6px;
+  position: absolute; top: 16px; right: 16px;
+  display: flex; gap: 4px;
 }
 .event-card .card-actions button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  opacity: 0.3;
-  transition: opacity 0.2s;
-  padding: 4px;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: 6px; cursor: pointer; font-size: 14px;
+  opacity: 0; transition: all 0.2s; padding: 4px 6px;
+  color: var(--text-muted);
 }
-.event-card .card-actions button:hover { opacity: 1; }
+.event-card:hover .card-actions button { opacity: 1; }
+.event-card .card-actions button:hover {
+  opacity: 1; color: var(--text-primary);
+  border-color: var(--accent-medium);
+}
 
 .empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #aaa;
+  text-align: center; padding: 80px 20px; color: var(--text-muted);
 }
-.empty-state p { font-size: 16px; margin-bottom: 16px; }
+.empty-state p { font-size: 14px; margin-bottom: 20px; }
 
-/* ===== Editor Page ===== */
-.event-info {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+/* ═══ Editor Page ═══ */
+.editor-toolbar {
+  margin-bottom: 20px;
+  display: flex; gap: 8px; align-items: center;
 }
-.event-info h2 { font-size: 16px; margin-bottom: 16px; color: #1a1a2e; }
+
+.event-info {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 2px var(--radius-lg) var(--radius-lg) 2px;
+  padding: 24px 24px 24px 28px;
+  margin-bottom: 20px;
+}
+.event-info h2 {
+  font-size: 11px; font-weight: 500; margin-bottom: 16px;
+  color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 2px;
+}
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
 }
-.info-grid label { font-size: 13px; color: #666; display: block; margin-bottom: 4px; }
+.info-grid label {
+  font-size: 10px; color: var(--text-muted); display: block;
+  margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;
+  font-weight: 500;
+}
 .info-grid input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: border-color 0.2s;
+  width: 100%; padding: 10px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px; font-family: var(--font-ui);
+  color: var(--text-primary);
+  transition: all 0.2s;
 }
-.info-grid input:focus { outline: none; border-color: #4a6cf7; }
+.info-grid input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.info-grid input::placeholder { color: var(--text-muted); }
 
+/* ═══ Roles Section ═══ */
 .roles-section {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid #c084fc;
+  border-radius: 2px var(--radius-lg) var(--radius-lg) 2px;
+  padding: 24px 24px 24px 28px;
+  margin-bottom: 20px;
 }
-.roles-section h2 { font-size: 16px; margin-bottom: 16px; color: #1a1a2e; }
-.roles-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.roles-section h2 {
+  font-size: 11px; font-weight: 500; margin-bottom: 16px;
+  color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.roles-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .role-tag {
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 12px; font-weight: 500;
+  border: 1px solid transparent;
+  transition: all 0.2s;
 }
+.role-tag:hover { filter: brightness(1.2); }
 .role-tag .remove-role {
-  cursor: pointer; font-size: 16px; line-height: 1; opacity: 0.6; transition: opacity 0.2s;
+  cursor: pointer; font-size: 14px; line-height: 1;
+  opacity: 0.5; transition: opacity 0.2s;
 }
 .role-tag .remove-role:hover { opacity: 1; }
 .add-role-row { display: flex; gap: 8px; }
 .add-role-row input {
-  padding: 6px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; width: 160px;
+  padding: 8px 12px;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px; font-family: var(--font-ui);
+  color: var(--text-primary); width: 180px;
 }
-.add-role-row input:focus { outline: none; border-color: #4a6cf7; }
+.add-role-row input:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.add-role-row input::placeholder { color: var(--text-muted); }
 
+/* ═══ Role Colors (dark theme) ═══ */
+.role-color-0 { background: rgba(96,165,250,0.15); color: #60a5fa; }
+.role-color-1 { background: rgba(251,146,60,0.15); color: #fb923c; }
+.role-color-2 { background: rgba(74,222,128,0.15); color: #4ade80; }
+.role-color-3 { background: rgba(192,132,252,0.15); color: #c084fc; }
+.role-color-4 { background: rgba(248,113,113,0.15); color: #f87171; }
+.role-color-5 { background: rgba(34,211,238,0.15); color: #22d3ee; }
+.role-color-6 { background: rgba(250,204,21,0.15); color: #facc15; }
+.role-color-7 { background: rgba(244,114,182,0.15); color: #f472b6; }
+
+/* ═══ Cue Table ═══ */
 .cue-section {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 24px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  overflow: hidden;
 }
-.cue-section h2 { font-size: 16px; margin-bottom: 16px; color: #1a1a2e; }
-.cue-table-wrapper { overflow-x: auto; }
-table.cue-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 800px; }
+.cue-section h2 {
+  font-size: 11px; font-weight: 500; margin-bottom: 16px;
+  color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.cue-table-wrapper { overflow-x: auto; margin: 0 -24px; padding: 0 24px; }
+table.cue-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px; min-width: 800px;
+}
 .cue-table th {
-  background: #f7f8fc; padding: 10px 12px; text-align: left;
-  font-weight: 600; color: #555; border-bottom: 2px solid #e8e8e8; white-space: nowrap;
+  background: var(--bg-elevated);
+  padding: 10px 12px; text-align: left;
+  font-weight: 600; font-size: 11px;
+  color: var(--text-secondary);
+  border-bottom: 2px solid var(--border-light);
+  white-space: nowrap;
+  text-transform: uppercase; letter-spacing: 0.5px;
 }
-.cue-table td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
-.cue-table tr:hover { background: #fafbff; }
+.cue-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.cue-table tr { transition: background 0.15s; }
+.cue-table tr:hover { background: var(--accent-dim); }
 .cue-table input, .cue-table textarea {
-  width: 100%; border: 1px solid transparent; background: transparent;
-  padding: 6px 8px; border-radius: 6px; font-size: 13px; font-family: inherit;
-  resize: vertical; transition: border-color 0.2s, background 0.2s;
+  width: 100%;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 6px 8px; border-radius: 4px;
+  font-size: 13px; font-family: var(--font-ui);
+  color: var(--text-primary);
+  resize: vertical;
+  transition: all 0.2s;
 }
-.cue-table input:focus, .cue-table textarea:focus { outline: none; border-color: #4a6cf7; background: #fff; }
-.cue-table input:hover, .cue-table textarea:hover { background: #f7f8fc; }
+.cue-table input:focus, .cue-table textarea:focus {
+  outline: none;
+  border-color: var(--accent-medium);
+  background: var(--bg-elevated);
+}
+.cue-table input:hover, .cue-table textarea:hover {
+  background: rgba(255,255,255,0.03);
+}
+.cue-table input::placeholder, .cue-table textarea::placeholder {
+  color: var(--text-muted);
+}
 .cue-table textarea { min-height: 36px; }
+
 td.row-actions { white-space: nowrap; text-align: center; }
 .row-actions button {
-  background: none; border: none; cursor: pointer; font-size: 16px;
-  padding: 4px; opacity: 0.4; transition: opacity 0.2s;
+  background: none; border: none; cursor: pointer;
+  font-size: 14px; padding: 4px;
+  opacity: 0; transition: opacity 0.2s;
+  color: var(--text-muted);
 }
-.row-actions button:hover { opacity: 1; }
+.cue-table tr:hover .row-actions button { opacity: 0.5; }
+.row-actions button:hover { opacity: 1 !important; color: var(--text-primary); }
 
-/* Drag handle */
+/* Drag */
 .drag-handle {
-  cursor: grab; opacity: 0.3; font-size: 14px; user-select: none; padding: 2px 4px;
-  transition: opacity 0.2s;
+  cursor: grab; opacity: 0; font-size: 12px;
+  user-select: none; padding: 2px 4px;
+  transition: opacity 0.2s; color: var(--text-muted);
 }
-.drag-handle:hover { opacity: 0.8; }
+.cue-table tr:hover .drag-handle { opacity: 0.5; }
+.drag-handle:hover { opacity: 1 !important; color: var(--accent); }
 .drag-handle:active { cursor: grabbing; }
-tr.dragging { opacity: 0.4; background: #e3f2fd !important; }
-tr.drag-over td { border-top: 2px solid #4a6cf7 !important; }
+tr.dragging { opacity: 0.3; }
+tr.drag-over td { border-top: 2px solid var(--accent) !important; }
 
-/* Insert row button */
+/* Insert */
 .insert-btn {
-  background: none; border: none; cursor: pointer; font-size: 14px;
-  opacity: 0.3; transition: opacity 0.2s; padding: 2px 4px; color: #2ed573;
+  background: none; border: none; cursor: pointer;
+  font-size: 12px; opacity: 0; transition: opacity 0.2s;
+  padding: 2px 4px; color: var(--success);
 }
-.insert-btn:hover { opacity: 1; }
+.cue-table tr:hover .insert-btn { opacity: 0.5; }
+.insert-btn:hover { opacity: 1 !important; }
 
-.col-num { width: 40px; text-align: center; }
+/* Column widths */
+.col-num { width: 50px; text-align: center; }
 .col-time { width: 90px; }
 .col-duration { width: 70px; }
 .col-item { width: 180px; }
 .col-note { min-width: 120px; }
 .col-actions { width: 70px; }
 
-.btn {
-  padding: 8px 18px; border: none; border-radius: 8px; font-size: 13px;
-  font-weight: 500; cursor: pointer; transition: all 0.2s; font-family: inherit;
-}
-.btn-primary { background: #4a6cf7; color: #fff; }
-.btn-primary:hover { background: #3b5de7; }
-.btn-secondary { background: #e8ecf4; color: #333; }
-.btn-secondary:hover { background: #dde1ea; }
-.btn-success { background: #2ed573; color: #fff; }
-.btn-success:hover { background: #26c066; }
-.btn-sm { padding: 6px 12px; font-size: 12px; }
-.add-row-btn { margin-top: 12px; display: flex; gap: 8px; }
+.add-row-btn { margin-top: 16px; display: flex; gap: 8px; }
 
-/* Modal */
+/* ═══ Save Indicator ═══ */
+.save-indicator {
+  font-size: 11px; color: var(--text-muted);
+  font-family: var(--font-mono);
+  transition: color 0.3s;
+}
+.save-indicator.saved { color: var(--accent); }
+
+/* ═══ Modals ═══ */
 .modal-overlay {
-  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
-  z-index: 1000; justify-content: center; align-items: center;
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  justify-content: center; align-items: center;
 }
 .modal-overlay.active { display: flex; }
 .modal {
-  background: #fff; border-radius: 16px; padding: 32px; width: 420px;
-  max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 32px; width: 420px; max-width: 90vw;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px var(--border);
 }
-.modal h3 { font-size: 18px; margin-bottom: 20px; color: #1a1a2e; }
-.modal-roles { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+.modal h3 {
+  font-size: 16px; font-weight: 600; margin-bottom: 20px;
+  color: var(--text-primary);
+}
+.modal-roles {
+  display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px;
+}
 .modal-roles label {
-  display: flex; align-items: center; gap: 10px; font-size: 14px;
-  cursor: pointer; padding: 8px 12px; border-radius: 8px; transition: background 0.2s;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; cursor: pointer;
+  padding: 8px 12px; border-radius: var(--radius);
+  transition: background 0.2s; color: var(--text-primary);
 }
-.modal-roles label:hover { background: #f7f8fc; }
-.modal-roles input[type="checkbox"] { width: 18px; height: 18px; accent-color: #4a6cf7; }
+.modal-roles label:hover { background: var(--bg-hover); }
+.modal-roles input[type="checkbox"] {
+  width: 16px; height: 16px; accent-color: var(--accent);
+}
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
-.role-color-0 { background: #e3f2fd; color: #1565c0; }
-.role-color-1 { background: #fff3e0; color: #e65100; }
-.role-color-2 { background: #e8f5e9; color: #2e7d32; }
-.role-color-3 { background: #f3e5f5; color: #7b1fa2; }
-.role-color-4 { background: #fce4ec; color: #c62828; }
-.role-color-5 { background: #e0f7fa; color: #00838f; }
-.role-color-6 { background: #fff8e1; color: #f57f17; }
-.role-color-7 { background: #efebe9; color: #4e342e; }
+/* ═══ Animations ═══ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.event-card { animation: fadeIn 0.4s ease both; }
+.event-card:nth-child(1) { animation-delay: 0s; }
+.event-card:nth-child(2) { animation-delay: 0.05s; }
+.event-card:nth-child(3) { animation-delay: 0.1s; }
+.event-card:nth-child(4) { animation-delay: 0.15s; }
+.event-card:nth-child(5) { animation-delay: 0.2s; }
+.event-card:nth-child(6) { animation-delay: 0.25s; }
 
-.save-indicator { font-size: 12px; color: #aaa; transition: color 0.3s; }
-.save-indicator.saved { color: #2ed573; }
+/* ═══ Print ═══ */
+@media print {
+  body, body::before { background: #fff; }
+  .header { display: none; }
+  .container { padding: 0; }
+  .event-info, .roles-section, .cue-section {
+    background: #fff; border-color: #ddd; color: #333;
+  }
+  .cue-table input, .cue-table textarea { color: #333; }
+  .cue-table th { background: #f0f0f0; color: #333; }
+}
+
+/* ═══ Mobile ═══ */
+@media (max-width: 768px) {
+  .header { padding: 0 16px; }
+  .container { padding: 16px; }
+  .event-cards { grid-template-columns: 1fr; }
+  .info-grid { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <h1 onclick="showListPage()">活動流程表系統</h1>
+  <h1 onclick="showListPage()"><span>FLOW</span>TYPE</h1>
   <div class="header-actions">
-    <span class="save-indicator" id="saveIndicator" style="display:none">自動儲存中</span>
+    <span class="save-indicator" id="saveIndicator" style="display:none">SAVING</span>
     <button class="btn btn-primary btn-sm" id="btnExportPDF" style="display:none" onclick="openExportModal()">匯出 PDF</button>
   </div>
 </div>
@@ -238,11 +481,11 @@ tr.drag-over td { border-top: 2px solid #4a6cf7 !important; }
 
   <!-- ===== Editor Page ===== -->
   <div class="event-editor-page" id="editorPage">
-    <div style="margin-bottom:16px;display:flex;gap:8px;align-items:center;">
+    <div class="editor-toolbar">
       <button class="btn btn-secondary btn-sm" onclick="showListPage()">&larr; 返回列表</button>
       <button class="btn btn-secondary btn-sm" id="btnUndo" onclick="undo()" style="margin-left:auto;opacity:0.3;" title="復原上一步 (Ctrl+Z)">&#x21A9; 復原</button>
       <button class="btn btn-secondary btn-sm" id="btnBackups" onclick="openBackupModal()">&#x1f4be; 版本紀錄</button>
-      <button class="btn btn-primary btn-sm" onclick="window.open('/v/'+currentEventId,'_blank')">&#x1f517; 線上預覽</button>
+      <button class="btn btn-secondary btn-sm" onclick="window.open('/v/'+currentEventId,'_blank')">&#x1f517; 線上預覽</button>
     </div>
     <div class="event-info">
       <h2>活動資訊</h2>
@@ -256,7 +499,7 @@ tr.drag-over td { border-top: 2px solid #4a6cf7 !important; }
       </div>
     </div>
     <div class="roles-section">
-      <h2>角色組別（可自訂）</h2>
+      <h2>角色組別</h2>
       <div class="roles-list" id="rolesList"></div>
       <div class="add-role-row">
         <input id="newRoleName" placeholder="新增角色名稱" onkeydown="if(event.key==='Enter')addRole()">
@@ -283,11 +526,11 @@ tr.drag-over td { border-top: 2px solid #4a6cf7 !important; }
 <div class="modal-overlay" id="exportModal">
   <div class="modal">
     <h3>匯出 PDF</h3>
-    <p style="font-size:14px;color:#666;margin-bottom:16px;">選擇要顯示的角色欄位：</p>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">選擇要顯示的角色欄位：</p>
     <div class="modal-roles" id="modalRoles"></div>
     <div style="margin-bottom:16px;">
-      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;">
-        <input type="checkbox" id="landscapeCheck" style="width:18px;height:18px;accent-color:#4a6cf7;">
+      <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;color:var(--text-primary);">
+        <input type="checkbox" id="landscapeCheck" style="width:16px;height:16px;accent-color:var(--accent);">
         橫向列印
       </label>
     </div>
@@ -302,7 +545,7 @@ tr.drag-over td { border-top: 2px solid #4a6cf7 !important; }
 <div class="modal-overlay" id="backupModal">
   <div class="modal" style="width:520px;">
     <h3>&#x1f4be; 版本紀錄</h3>
-    <p style="font-size:13px;color:#666;margin-bottom:16px;">每次儲存自動備份，可回復到先前版本</p>
+    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px;">每次儲存自動備份，可回復到先前版本</p>
     <div id="backupList" style="max-height:400px;overflow-y:auto;"></div>
     <div class="modal-actions" style="margin-top:16px;">
       <button class="btn btn-secondary" onclick="closeBackupModal()">關閉</button>
@@ -318,10 +561,14 @@ let undoStack = [];  // undo history (max 50 snapshots)
 const MAX_UNDO = 50;
 
 const ROLE_COLORS = [
-  { bg: '#e3f2fd', fg: '#1565c0' }, { bg: '#fff3e0', fg: '#e65100' },
-  { bg: '#e8f5e9', fg: '#2e7d32' }, { bg: '#f3e5f5', fg: '#7b1fa2' },
-  { bg: '#fce4ec', fg: '#c62828' }, { bg: '#e0f7fa', fg: '#00838f' },
-  { bg: '#fff8e1', fg: '#f57f17' }, { bg: '#efebe9', fg: '#4e342e' },
+  { bg: 'rgba(96,165,250,0.15)', fg: '#60a5fa' },
+  { bg: 'rgba(251,146,60,0.15)', fg: '#fb923c' },
+  { bg: 'rgba(74,222,128,0.15)', fg: '#4ade80' },
+  { bg: 'rgba(192,132,252,0.15)', fg: '#c084fc' },
+  { bg: 'rgba(248,113,113,0.15)', fg: '#f87171' },
+  { bg: 'rgba(34,211,238,0.15)', fg: '#22d3ee' },
+  { bg: 'rgba(250,204,21,0.15)', fg: '#facc15' },
+  { bg: 'rgba(244,114,182,0.15)', fg: '#f472b6' },
 ];
 const PDF_ROLE_COLORS = [
   [30,136,229],[230,81,0],[46,125,50],[123,31,162],
@@ -352,9 +599,9 @@ async function loadEventList() {
       </div>
       <h3>${esc(ev.name) || '未命名活動'}</h3>
       <div class="meta">
-        ${ev.date ? '<span>日期：' + ev.date + '</span>' : ''}
-        ${ev.venue ? '<span>場地：' + esc(ev.venue) + '</span>' : ''}
-        <span>更新：${new Date(ev.updatedAt).toLocaleString('zh-TW')}</span>
+        ${ev.date ? '<span>' + ev.date + '</span>' : ''}
+        ${ev.venue ? '<span>' + esc(ev.venue) + '</span>' : ''}
+        <span>${new Date(ev.updatedAt).toLocaleString('zh-TW')}</span>
       </div>
     </div>
   `).join('');
@@ -466,9 +713,9 @@ async function saveToServer() {
   pushUndo();
   await api('PUT', '/events/' + currentEventId, state);
   const ind = document.getElementById('saveIndicator');
-  ind.textContent = '已儲存';
+  ind.textContent = 'SAVED';
   ind.classList.add('saved');
-  setTimeout(() => { ind.textContent = '自動儲存中'; ind.classList.remove('saved'); }, 1500);
+  setTimeout(() => { ind.textContent = 'SAVING'; ind.classList.remove('saved'); }, 1500);
 }
 
 // ============ Roles ============
@@ -514,7 +761,8 @@ function renderHead() {
   const head = document.getElementById('cueHead');
   let html = '<tr><th class="col-num">#</th><th class="col-time">時間</th><th class="col-duration">時長</th><th class="col-item">項目</th>';
   state.roles.forEach((role, i) => {
-    html += `<th class="col-note" style="color:${ROLE_COLORS[i % ROLE_COLORS.length].fg}">${esc(role)}</th>`;
+    const c = ROLE_COLORS[i % ROLE_COLORS.length];
+    html += `<th class="col-note" style="color:${c.fg};border-bottom:2px solid ${c.fg}">${esc(role)}</th>`;
   });
   html += '<th class="col-actions">操作</th></tr>';
   head.innerHTML = html;
@@ -527,19 +775,19 @@ function renderBody() {
   state.rows.forEach((row, i) => {
     if (row.isSection) {
       const colspan = 4 + state.roles.length + 1;
-      html += `<tr draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event)" ondragenter="onDragEnter(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,${i})" ondragend="onDragEnd(event)" style="background:#f0f2f5;">`;
-      html += `<td colspan="${colspan}" style="padding:8px 12px;font-weight:700;font-size:14px;color:#1a1a2e;">`;
+      html += `<tr draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event)" ondragenter="onDragEnter(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,${i})" ondragend="onDragEnd(event)" style="background:var(--bg-elevated);">`;
+      html += `<td colspan="${colspan}" style="padding:10px 12px;font-weight:600;font-size:13px;color:var(--accent);border-left:3px solid var(--accent);">`;
       html += `<span class="drag-handle" title="拖曳排序">&#x2630;</span> `;
-      html += `<input value="${esc(row.sectionLabel)}" placeholder="段落名稱（例：彩排、正式演出）" style="font-weight:700;font-size:14px;color:#1a1a2e;width:calc(100% - 100px);" oninput="state.rows[${i}].sectionLabel=this.value;autoSave()">`;
+      html += `<input value="${esc(row.sectionLabel)}" placeholder="段落名稱（例：彩排、正式演出）" style="font-weight:600;font-size:13px;color:var(--accent);width:calc(100% - 100px);background:transparent;border:1px solid transparent;padding:4px 8px;border-radius:4px;font-family:var(--font-ui);" onfocus="this.style.borderColor='var(--accent-medium)';this.style.background='var(--bg-surface)'" onblur="this.style.borderColor='transparent';this.style.background='transparent'" oninput="state.rows[${i}].sectionLabel=this.value;autoSave()">`;
       html += `<span style="float:right;">`;
       html += `<button class="insert-btn" onclick="insertRow(${i})" title="在下方插入">&#x2795;</button>`;
-      html += `<button style="background:none;border:none;cursor:pointer;opacity:0.4;font-size:16px;" onclick="deleteRow(${i})">&#x1f5d1;</button>`;
+      html += `<button style="background:none;border:none;cursor:pointer;opacity:0.4;font-size:14px;color:var(--danger);transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'" onclick="deleteRow(${i})">&#x1f5d1;</button>`;
       html += `</span></td></tr>`;
     } else {
       html += `<tr draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event)" ondragenter="onDragEnter(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,${i})" ondragend="onDragEnd(event)">`;
-      html += `<td class="col-num" style="color:#aaa;font-size:12px;"><span class="drag-handle" title="拖曳排序">&#x2630;</span> ${num++}</td>`;
-      html += `<td><input value="${esc(row.time)}" placeholder="時間" oninput="state.rows[${i}].time=this.value;autoSave()"></td>`;
-      html += `<td><input value="${esc(row.duration)}" placeholder="分鐘" oninput="state.rows[${i}].duration=this.value;autoSave()"></td>`;
+      html += `<td class="col-num" style="color:var(--text-muted);font-size:11px;font-family:var(--font-mono);"><span class="drag-handle" title="拖曳排序">&#x2630;</span> ${num++}</td>`;
+      html += `<td><input value="${esc(row.time)}" placeholder="時間" style="font-family:var(--font-mono);font-size:12px;" oninput="state.rows[${i}].time=this.value;autoSave()"></td>`;
+      html += `<td><input value="${esc(row.duration)}" placeholder="min" style="font-family:var(--font-mono);font-size:12px;text-align:center;" oninput="state.rows[${i}].duration=this.value;autoSave()"></td>`;
       html += `<td><textarea placeholder="項目名稱" oninput="state.rows[${i}].item=this.value;autoSave()">${esc(row.item)}</textarea></td>`;
       state.roles.forEach(role => {
         const val = (row.notes && row.notes[role]) || '';
@@ -716,7 +964,6 @@ async function generatePDF() {
   const headerFontSize = baseFontSize + 0.5;
 
   // Max row height: prevent single rows from spanning pages
-  // For landscape A4: usable height ~190mm, allow max ~45mm per row (about 4 rows/page)
   const maxRowH = isLandscape ? 45 : 55;
 
   doc.autoTable({
@@ -728,7 +975,6 @@ async function generatePDF() {
       if (data.section === 'head' && headerStyles[data.column.index]) Object.assign(data.cell.styles, headerStyles[data.column.index]);
       // Clamp row height: truncate overflowing text with ellipsis indicator
       if (data.section === 'body' && data.cell.text && Array.isArray(data.cell.text)) {
-        // Estimate: each line ~baseFontSize * 0.35mm height + padding
         const lineH = baseFontSize * 0.45;
         const maxLines = Math.floor((maxRowH - 3) / lineH);
         if (data.cell.text.length > maxLines) {
@@ -779,9 +1025,9 @@ async function undo() {
   // Save the restored state to server (without pushing to undo)
   await api('PUT', '/events/' + currentEventId, state);
   const ind = document.getElementById('saveIndicator');
-  ind.textContent = '已復原';
+  ind.textContent = 'RESTORED';
   ind.classList.add('saved');
-  setTimeout(() => { ind.textContent = '自動儲存中'; ind.classList.remove('saved'); }, 1500);
+  setTimeout(() => { ind.textContent = 'SAVING'; ind.classList.remove('saved'); }, 1500);
 }
 
 // Ctrl+Z / Cmd+Z shortcut for undo
@@ -804,20 +1050,20 @@ function closeBackupModal() { document.getElementById('backupModal').classList.r
 
 async function loadBackups() {
   const container = document.getElementById('backupList');
-  container.innerHTML = '<p style="color:#aaa;text-align:center;">載入中...</p>';
+  container.innerHTML = '<p style="color:var(--text-muted);text-align:center;">載入中...</p>';
   const backups = await api('GET', '/events/' + currentEventId + '/backups');
   if (backups.length === 0) {
-    container.innerHTML = '<p style="color:#aaa;text-align:center;">目前沒有備份紀錄</p>';
+    container.innerHTML = '<p style="color:var(--text-muted);text-align:center;">目前沒有備份紀錄</p>';
     return;
   }
   container.innerHTML = backups.map((b, i) => {
     const date = new Date(b.createdAt);
     const timeStr = date.toLocaleString('zh-TW');
     const sizeKB = (b.size / 1024).toFixed(1);
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #f0f0f0;${i===0?'background:#f7f8fc;':''}">
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);${i===0?'background:var(--bg-elevated);':''}">
       <div>
-        <div style="font-size:13px;font-weight:500;">${timeStr}</div>
-        <div style="font-size:11px;color:#aaa;">${sizeKB} KB</div>
+        <div style="font-size:12px;font-weight:500;font-family:var(--font-mono);color:var(--text-primary);">${timeStr}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${sizeKB} KB</div>
       </div>
       <button class="btn btn-secondary btn-sm" onclick="restoreBackup('${esc(b.filename)}')">回復</button>
     </div>`;
@@ -835,9 +1081,9 @@ async function restoreBackup(filename) {
     renderTable();
     closeBackupModal();
     const ind = document.getElementById('saveIndicator');
-    ind.textContent = '已回復';
+    ind.textContent = 'RESTORED';
     ind.classList.add('saved');
-    setTimeout(() => { ind.textContent = '自動儲存中'; ind.classList.remove('saved'); }, 2000);
+    setTimeout(() => { ind.textContent = 'SAVING'; ind.classList.remove('saved'); }, 2000);
   }
 }
 
