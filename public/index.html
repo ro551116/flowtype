@@ -533,8 +533,12 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
   <!-- ===== List Page ===== -->
   <div class="event-list-page" id="listPage">
     <div class="list-header">
-      <h2>所有活動</h2>
-      <button class="btn btn-primary" onclick="createNewEvent()">+ 新增活動</button>
+      <h2 id="listTitle">所有活動</h2>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-secondary btn-sm" id="btnToggleArchived" onclick="toggleArchivedView()">📦 已封存</button>
+        <button class="btn btn-secondary btn-sm" id="btnArchiveExpired" onclick="archiveExpired()">⏳ 一鍵封存過期</button>
+        <button class="btn btn-primary" id="btnNewEvent" onclick="createNewEvent()">+ 新增活動</button>
+      </div>
     </div>
     <div class="event-cards" id="eventCards"></div>
   </div>
@@ -640,6 +644,7 @@ let currentEventId = null;
 let state = null;
 let undoStack = [];
 const MAX_UNDO = 50;
+let showingArchived = false;
 
 const ROLE_COLORS = [
   { bg: '#e3f2fd', fg: '#1565c0' },
@@ -666,16 +671,26 @@ async function api(method, path, body) {
 
 // ============ List Page ============
 async function loadEventList() {
-  const events = await api('GET', '/events');
+  const query = showingArchived ? '?archived=true' : '';
+  const events = await api('GET', '/events' + query);
   const container = document.getElementById('eventCards');
+  document.getElementById('listTitle').textContent = showingArchived ? '已封存活動' : '所有活動';
+  document.getElementById('btnToggleArchived').innerHTML = showingArchived ? '&#x2190; 返回進行中' : '📦 已封存';
+  document.getElementById('btnArchiveExpired').style.display = showingArchived ? 'none' : '';
+  document.getElementById('btnNewEvent').style.display = showingArchived ? 'none' : '';
   if (events.length === 0) {
-    container.innerHTML = '<div class="empty-state"><p>還沒有任何活動</p><button class="btn btn-primary" onclick="createNewEvent()">建立第一個活動</button></div>';
+    const msg = showingArchived ? '沒有已封存的活動' : '還沒有任何活動';
+    container.innerHTML = `<div class="empty-state"><p>${msg}</p>${showingArchived ? '' : '<button class="btn btn-primary" onclick="createNewEvent()">建立第一個活動</button>'}</div>`;
     return;
   }
   container.innerHTML = events.map(ev => `
     <div class="event-card" onclick="openEvent('${ev.id}')">
       <div class="card-actions">
-        <button onclick="event.stopPropagation();duplicateEvent('${ev.id}')" title="複製">&#x2398;</button>
+        ${showingArchived
+          ? `<button onclick="event.stopPropagation();unarchiveEvent('${ev.id}')" title="還原">&#x21A9;</button>`
+          : `<button onclick="event.stopPropagation();archiveEvent('${ev.id}','${esc(ev.name)}')" title="封存">📦</button>
+             <button onclick="event.stopPropagation();duplicateEvent('${ev.id}')" title="複製">&#x2398;</button>`
+        }
         <button onclick="event.stopPropagation();deleteEvent('${ev.id}','${esc(ev.name)}')" title="刪除">&#x1f5d1;</button>
       </div>
       <h3>${esc(ev.name) || '未命名活動'}</h3>
@@ -705,6 +720,33 @@ async function deleteEvent(id, name) {
 
 async function duplicateEvent(id) {
   await api('POST', '/events/' + id + '/duplicate');
+  loadEventList();
+}
+
+async function archiveEvent(id, name) {
+  if (!confirm(`確定要封存「${name || '未命名活動'}」嗎？`)) return;
+  await api('POST', '/events/' + id + '/archive');
+  loadEventList();
+}
+
+async function unarchiveEvent(id) {
+  await api('POST', '/events/' + id + '/unarchive');
+  loadEventList();
+}
+
+function toggleArchivedView() {
+  showingArchived = !showingArchived;
+  loadEventList();
+}
+
+async function archiveExpired() {
+  if (!confirm('確定要一鍵封存所有已過期的活動嗎？')) return;
+  const result = await api('POST', '/events/archive-expired');
+  if (result.archived && result.archived.length > 0) {
+    alert(`已封存 ${result.archived.length} 個過期活動：\n${result.archived.map(e => e.name).join('\n')}`);
+  } else {
+    alert('沒有需要封存的過期活動');
+  }
   loadEventList();
 }
 

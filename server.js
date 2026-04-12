@@ -7,27 +7,32 @@ const PORT = process.env.PORT || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 
 const BACKUP_DIR = process.env.BACKUP_DIR || path.join(__dirname, 'data', '_backups');
+const ARCHIVE_DIR = path.join(DATA_DIR, '_archived');
 const MAX_BACKUPS = 30;
 
 // Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+if (!fs.existsSync(ARCHIVE_DIR)) fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// List all events
+// List all events (add ?archived=true to list archived ones)
 app.get('/api/events', (req, res) => {
-  const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.json'));
+  const showArchived = req.query.archived === 'true';
+  const dir = showArchived ? ARCHIVE_DIR : DATA_DIR;
+  const files = fs.readdirSync(dir).filter(f => f.endsWith('.json'));
   const events = files.map(f => {
     try {
-      const data = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), 'utf8'));
+      const data = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
       return {
         id: path.basename(f, '.json'),
         name: data.event?.name || '未命名活動',
         date: data.event?.date || '',
         venue: data.event?.venue || '',
-        updatedAt: fs.statSync(path.join(DATA_DIR, f)).mtime.toISOString()
+        archived: showArchived,
+        updatedAt: fs.statSync(path.join(dir, f)).mtime.toISOString()
       };
     } catch { return null; }
   }).filter(Boolean);
@@ -35,11 +40,17 @@ app.get('/api/events', (req, res) => {
   res.json(events);
 });
 
-// Get single event
+// Get single event (checks both active and archived)
 app.get('/api/events/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, `${req.params.id}.json`);
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'not found' });
+  let filePath = path.join(DATA_DIR, `${req.params.id}.json`);
+  let archived = false;
+  if (!fs.existsSync(filePath)) {
+    filePath = path.join(ARCHIVE_DIR, `${req.params.id}.json`);
+    archived = true;
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'not found' });
+  }
   const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  data._archived = archived;
   res.json(data);
 });
 
@@ -119,10 +130,51 @@ app.post('/api/events/:id/restore/:filename', (req, res) => {
   res.json({ ok: true, data: JSON.parse(data) });
 });
 
-// Delete event
+// Archive event
+app.post('/api/events/:id/archive', (req, res) => {
+  const src = path.join(DATA_DIR, `${req.params.id}.json`);
+  if (!fs.existsSync(src)) return res.status(404).json({ error: 'not found' });
+  const dst = path.join(ARCHIVE_DIR, `${req.params.id}.json`);
+  fs.renameSync(src, dst);
+  res.json({ ok: true });
+});
+
+// Unarchive event
+app.post('/api/events/:id/unarchive', (req, res) => {
+  const src = path.join(ARCHIVE_DIR, `${req.params.id}.json`);
+  if (!fs.existsSync(src)) return res.status(404).json({ error: 'not found' });
+  const dst = path.join(DATA_DIR, `${req.params.id}.json`);
+  fs.renameSync(src, dst);
+  res.json({ ok: true });
+});
+
+// Archive all expired events (date < today)
+app.post('/api/events/archive-expired', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const files = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.json'));
+  const archived = [];
+  for (const f of files) {
+    try {
+      const data = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), 'utf8'));
+      const eventDate = data.event?.date || '';
+      // Normalize date: extract YYYY-MM-DD from various formats
+      const match = eventDate.match(/\d{4}[-/]\d{2}[-/]\d{2}/);
+      if (match && match[0].replace(/\//g, '-') < today) {
+        const id = path.basename(f, '.json');
+        fs.renameSync(path.join(DATA_DIR, f), path.join(ARCHIVE_DIR, f));
+        archived.push({ id, name: data.event?.name, date: eventDate });
+      }
+    } catch {}
+  }
+  res.json({ ok: true, archived });
+});
+
+// Delete event (checks both active and archived)
 app.delete('/api/events/:id', (req, res) => {
-  const filePath = path.join(DATA_DIR, `${req.params.id}.json`);
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  const activePath = path.join(DATA_DIR, `${req.params.id}.json`);
+  const archivedPath = path.join(ARCHIVE_DIR, `${req.params.id}.json`);
+  if (fs.existsSync(activePath)) fs.unlinkSync(activePath);
+  else if (fs.existsSync(archivedPath)) fs.unlinkSync(archivedPath);
   res.json({ ok: true });
 });
 
