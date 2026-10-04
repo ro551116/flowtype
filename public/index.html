@@ -450,6 +450,7 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
   transition: color 0.3s;
 }
 .save-indicator.saved { color: var(--accent); }
+.save-indicator.error { color: var(--danger); font-weight: 700; }
 
 /* ═══ Modals ═══ */
 .modal-overlay {
@@ -638,6 +639,18 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
   </div>
 </div>
 
+<!-- Conflict Modal -->
+<div class="modal-overlay" id="conflictModal">
+  <div class="modal" style="width:460px;">
+    <h3>&#x26A0; 版本衝突</h3>
+    <p id="conflictMessage" style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin-bottom:16px;white-space:pre-line;"></p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="conflictSecondary"></button>
+      <button class="btn btn-primary" id="conflictPrimary"></button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ============ State ============
 let currentEventId = null;
@@ -645,6 +658,7 @@ let state = null;
 let undoStack = [];
 const MAX_UNDO = 50;
 let showingArchived = false;
+let listedEvents = new Map();
 
 const ROLE_COLORS = [
   { bg: '#e3f2fd', fg: '#1565c0' },
@@ -662,11 +676,17 @@ const PDF_ROLE_COLORS = [
 ];
 
 // ============ API ============
+async function apiFetch(method, path, body, headers = {}) {
+  const opts = { method, headers: { 'Content-Type': 'application/json', ...headers } };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  return fetch('/api' + path, opts);
+}
+
 async function api(method, path, body) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' } };
-  if (body) opts.body = JSON.stringify(body);
-  const res = await fetch('/api' + path, opts);
-  return res.json();
+  const res = await apiFetch(method, path, body);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
 }
 
 // ============ List Page ============
@@ -683,19 +703,21 @@ async function loadEventList() {
     container.innerHTML = `<div class="empty-state"><p>${msg}</p>${showingArchived ? '' : '<button class="btn btn-primary" onclick="createNewEvent()">建立第一個活動</button>'}</div>`;
     return;
   }
+  listedEvents = new Map(events.map(ev => [ev.id, ev]));
+  // Only escaped data attributes reach the markup; handlers read them back instead of embedding names in JS.
   container.innerHTML = events.map(ev => `
-    <div class="event-card" onclick="openEvent('${ev.id}')">
+    <div class="event-card" data-id="${esc(ev.id)}" onclick="openEvent(this.dataset.id)">
       <div class="card-actions">
         ${showingArchived
-          ? `<button onclick="event.stopPropagation();unarchiveEvent('${ev.id}')" title="還原">&#x21A9;</button>`
-          : `<button onclick="event.stopPropagation();archiveEvent('${ev.id}','${esc(ev.name)}')" title="封存">📦</button>
-             <button onclick="event.stopPropagation();duplicateEvent('${ev.id}')" title="複製">&#x2398;</button>`
+          ? `<button onclick="event.stopPropagation();unarchiveEvent(this.closest('.event-card').dataset.id)" title="還原">&#x21A9;</button>`
+          : `<button onclick="event.stopPropagation();archiveEvent(this.closest('.event-card').dataset.id)" title="封存">📦</button>
+             <button onclick="event.stopPropagation();duplicateEvent(this.closest('.event-card').dataset.id)" title="複製">&#x2398;</button>`
         }
-        <button onclick="event.stopPropagation();deleteEvent('${ev.id}','${esc(ev.name)}')" title="刪除">&#x1f5d1;</button>
+        <button onclick="event.stopPropagation();deleteEvent(this.closest('.event-card').dataset.id)" title="刪除">&#x1f5d1;</button>
       </div>
       <h3>${esc(ev.name) || '未命名活動'}</h3>
       <div class="meta">
-        ${ev.date ? '<span>' + ev.date + '</span>' : ''}
+        ${ev.date ? '<span>' + esc(ev.date) + '</span>' : ''}
         ${ev.venue ? '<span>' + esc(ev.venue) + '</span>' : ''}
         <span>${new Date(ev.updatedAt).toLocaleString('zh-TW')}</span>
       </div>
@@ -712,7 +734,8 @@ async function createNewEvent() {
   openEvent(data.id);
 }
 
-async function deleteEvent(id, name) {
+async function deleteEvent(id) {
+  const name = listedEvents.get(id)?.name;
   if (!confirm(`確定要刪除「${name || '未命名活動'}」嗎？`)) return;
   await api('DELETE', '/events/' + id);
   loadEventList();
@@ -723,7 +746,8 @@ async function duplicateEvent(id) {
   loadEventList();
 }
 
-async function archiveEvent(id, name) {
+async function archiveEvent(id) {
+  const name = listedEvents.get(id)?.name;
   if (!confirm(`確定要封存「${name || '未命名活動'}」嗎？`)) return;
   await api('POST', '/events/' + id + '/archive');
   loadEventList();
@@ -750,20 +774,40 @@ async function archiveExpired() {
   loadEventList();
 }
 
-function showListPage() {
+function showListView() {
+  clearTimeout(saveTimer); saveTimer = null;
+  clearTimeout(retryTimer); retryTimer = null;
   currentEventId = null;
   state = null;
+  currentRev = lastSavedJson = checkpointJson = null;
+  undoStack = [];
   document.getElementById('listPage').style.display = 'block';
   document.getElementById('editorPage').style.display = 'none';
   document.getElementById('saveIndicator').style.display = 'none';
   document.getElementById('btnExportPDF').style.display = 'none';
-  history.pushState({}, '', '/');
   loadEventList();
+}
+
+// pushUrl=false when the URL already points at the list (back button / initial load).
+async function showListPage({ pushUrl = true } = {}) {
+  if (state && !(await leaveEditor())) {
+    if (!pushUrl) history.pushState({}, '', '/?id=' + encodeURIComponent(currentEventId));
+    return;
+  }
+  if (pushUrl) history.pushState({}, '', '/');
+  showListView();
+}
+
+// Push pending edits before leaving an event. Returns false if the user decides to stay.
+async function leaveEditor() {
+  if ((await saveNow()) || !state) return true;
+  return confirm('還有修改沒有成功儲存到伺服器（網路或伺服器問題）。\n確定要離開嗎？離開後這些修改會遺失。');
 }
 
 // ============ Data Normalization ============
 function normalizeState() {
   if (!state) return;
+  if (!state.event || typeof state.event !== 'object') state.event = {};
   if (!state.roles) state.roles = [];
   if (!state.rows) state.rows = [];
   if (!state.customFields) state.customFields = [];
@@ -811,26 +855,66 @@ function updateCustomField(idx, key, value) {
 }
 
 // ============ Editor Page ============
-async function openEvent(id) {
-  currentEventId = id;
-  state = await api('GET', '/events/' + id);
+async function fetchEvent(id) {
+  const res = await apiFetch('GET', '/events/' + encodeURIComponent(id));
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(res.status === 404 ? '找不到這個活動，可能已被刪除。' : `無法載入活動（${data.error || 'HTTP ' + res.status}）`);
+  return { data, rev: res.headers.get('ETag') };
+}
+
+// Replace the editor content with a version the server just returned.
+function applyLoadedEvent(data, rev) {
+  state = data;
+  delete state._archived;
   normalizeState();
-  undoStack = [];
+  syncEventFields();
+  currentRev = rev;
+  lastSavedJson = checkpointJson = snapshotState();
+  renderCustomFields();
+  renderRoles();
+  renderTable();
   updateUndoBtn();
+  setSaveStatus('saved');
+}
+
+// pushUrl=false when the URL already points at this event (back/forward or initial load).
+async function openEvent(id, { pushUrl = true } = {}) {
+  if (state && !(await leaveEditor())) {
+    if (!pushUrl) history.pushState({}, '', '/?id=' + encodeURIComponent(currentEventId));
+    return;
+  }
+  let loaded;
+  try {
+    loaded = await fetchEvent(id);
+  } catch (err) {
+    alert(err.message);
+    history.replaceState({}, '', '/');
+    showListView();
+    return;
+  }
+  currentEventId = id;
+  undoStack = [];
   document.getElementById('listPage').style.display = 'none';
   document.getElementById('editorPage').style.display = 'block';
   document.getElementById('saveIndicator').style.display = 'inline';
   document.getElementById('btnExportPDF').style.display = 'inline-block';
-  history.pushState({}, '', '/?id=' + id);
-  syncEventFields();
-  renderCustomFields();
-  renderRoles();
-  renderTable();
+  if (pushUrl) history.pushState({}, '', '/?id=' + encodeURIComponent(id));
+  applyLoadedEvent(loaded.data, loaded.rev);
+}
+
+// <input type="date"> cannot display free-text dates such as "2026/4/9（四）14:00" from Excel imports.
+// Keep the stored text unless the user actually changes the date.
+let displayedDate = '';
+
+function toInputDate(text) {
+  const m = String(text || '').match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  return m ? `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` : '';
 }
 
 function readEventFields() {
   state.event.name = document.getElementById('eventName').value;
-  state.event.date = document.getElementById('eventDate').value;
+  const date = document.getElementById('eventDate').value;
+  if (date !== displayedDate) state.event.date = date;
   state.event.venue = document.getElementById('eventVenue').value;
   state.event.organizer = document.getElementById('eventOrganizer').value;
   state.event.contact = document.getElementById('eventContact').value;
@@ -839,7 +923,8 @@ function readEventFields() {
 
 function syncEventFields() {
   document.getElementById('eventName').value = state.event.name || '';
-  document.getElementById('eventDate').value = state.event.date || '';
+  displayedDate = toInputDate(state.event.date);
+  document.getElementById('eventDate').value = displayedDate;
   document.getElementById('eventVenue').value = state.event.venue || '';
   document.getElementById('eventOrganizer').value = state.event.organizer || '';
   document.getElementById('eventContact').value = state.event.contact || '';
@@ -847,33 +932,176 @@ function syncEventFields() {
 }
 
 // ============ Auto Save to Server ============
-let saveTimer;
-function autoSave() {
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(saveToServer, 800);
+// Edits are debounced, then saved one request at a time. Each PUT carries the revision the editor
+// is based on (If-Match), so a save never silently overwrites changes made in another tab or by
+// another person. Every confirmed save is also an undo checkpoint.
+const SAVE_DELAY_MS = 800;
+const SAVE_RETRY_MS = 5000;
+const KEEPALIVE_MAX_BYTES = 60000; // browsers cap keepalive request bodies at 64 KB
+let saveTimer = null;
+let retryTimer = null;
+let savePromise = null;
+let currentRev = null;      // ETag of the server version the editor is based on
+let lastSavedJson = null;   // state the server has confirmed
+let checkpointJson = null;  // state at the latest undo checkpoint
+let overwriteNext = false;  // user chose to overwrite a conflicting version
+
+const SAVE_STATUS = {
+  pending: ['EDITING', '', '有修改，稍後自動儲存'],
+  saving: ['SAVING…', '', '儲存中'],
+  saved: ['SAVED', 'saved', '已儲存到伺服器'],
+  retrying: ['SAVE FAILED · RETRYING', 'error', '儲存失敗，會自動重試；請先不要關閉頁面'],
+  failed: ['SAVE FAILED', 'error', '伺服器拒絕這次儲存，請重新整理頁面'],
+  conflict: ['CONFLICT', 'error', '與其他地方的修改衝突'],
+};
+
+function setSaveStatus(kind) {
+  const [text, cls, title] = SAVE_STATUS[kind];
+  const ind = document.getElementById('saveIndicator');
+  ind.textContent = text;
+  ind.className = 'save-indicator' + (cls ? ' ' + cls : '');
+  ind.title = title;
 }
 
-function pushUndo() {
-  undoStack.push(JSON.stringify(state));
+function snapshotState() {
+  readEventFields();
+  return JSON.stringify(state);
+}
+
+function hasUnsavedChanges() {
+  return !!state && (savePromise !== null || snapshotState() !== lastSavedJson);
+}
+
+function autoSave() {
+  clearTimeout(saveTimer);
+  setSaveStatus('pending');
+  saveTimer = setTimeout(saveNow, SAVE_DELAY_MS);
+  updateUndoBtn();
+}
+
+// Resolves true once the server holds the current state; false on failure or an unresolved conflict.
+function saveNow() {
+  clearTimeout(saveTimer); saveTimer = null;
+  clearTimeout(retryTimer); retryTimer = null;
+  if (!savePromise) savePromise = runSaves().finally(() => { savePromise = null; });
+  return savePromise;
+}
+
+async function runSaves() {
+  while (state) {
+    const eventId = currentEventId;
+    const json = snapshotState();
+    if (json !== checkpointJson) {
+      pushUndo(checkpointJson);
+      checkpointJson = json;
+    }
+    if (json === lastSavedJson && !overwriteNext) {
+      setSaveStatus('saved');
+      return true;
+    }
+    const ifMatch = overwriteNext || !currentRev ? '*' : currentRev;
+    overwriteNext = false;
+    setSaveStatus('saving');
+    let res = null;
+    try {
+      res = await fetch('/api/events/' + encodeURIComponent(eventId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'If-Match': ifMatch },
+        body: json,
+        keepalive: new TextEncoder().encode(json).length < KEEPALIVE_MAX_BYTES,
+      });
+    } catch {}
+    if (eventId !== currentEventId) return false;
+    if (res && res.ok) {
+      currentRev = res.headers.get('ETag');
+      lastSavedJson = json;
+      continue; // pick up edits made while the request was in flight
+    }
+    if (res && res.status === 412) {
+      if (await resolveConflict(await res.json().catch(() => ({})))) continue;
+      return false;
+    }
+    if (!res || res.status >= 500) {
+      setSaveStatus('retrying');
+      retryTimer = setTimeout(saveNow, SAVE_RETRY_MS);
+    } else {
+      setSaveStatus('failed');
+    }
+    return false;
+  }
+  return true;
+}
+
+function askConflict(message, primaryLabel, secondaryLabel) {
+  return new Promise(resolve => {
+    const modal = document.getElementById('conflictModal');
+    const primary = document.getElementById('conflictPrimary');
+    const secondary = document.getElementById('conflictSecondary');
+    document.activeElement?.blur(); // keep typing from going into the editor behind the dialog
+    document.getElementById('conflictMessage').textContent = message;
+    primary.textContent = primaryLabel;
+    secondary.textContent = secondaryLabel;
+    const choose = choice => {
+      modal.classList.remove('active');
+      primary.onclick = secondary.onclick = null;
+      resolve(choice);
+    };
+    primary.onclick = () => choose('primary');
+    secondary.onclick = () => choose('secondary');
+    modal.classList.add('active');
+  });
+}
+
+// Returns true when the save loop should continue (overwrite or reloaded), false to stop.
+async function resolveConflict(info) {
+  setSaveStatus('conflict');
+  if (info.exists === false) {
+    const choice = await askConflict('這份流程表已經在其他地方被刪除。', '用我的內容重新建立', '回到列表');
+    if (choice === 'primary') { overwriteNext = true; return true; }
+    history.pushState({}, '', '/');
+    showListView();
+    return false;
+  }
+  const choice = await askConflict(
+    '這份流程表剛剛在其他地方（其他人或另一個分頁）被修改過。\n\n' +
+    '・載入最新版本：捨棄你這次還沒同步的修改。\n' +
+    '・用我的版本覆蓋：對方的版本會保留在「版本紀錄」，之後仍可回復。',
+    '載入最新版本', '用我的版本覆蓋'
+  );
+  if (choice === 'secondary') { overwriteNext = true; return true; }
+  try {
+    const { data, rev } = await fetchEvent(currentEventId);
+    undoStack = [];
+    applyLoadedEvent(data, rev);
+    return true;
+  } catch (err) {
+    alert(err.message);
+    setSaveStatus('failed');
+    return false;
+  }
+}
+
+function pushUndo(json) {
+  undoStack.push(json);
   if (undoStack.length > MAX_UNDO) undoStack.shift();
   updateUndoBtn();
 }
 
 function updateUndoBtn() {
   const btn = document.getElementById('btnUndo');
-  if (btn) btn.style.opacity = undoStack.length > 0 ? '1' : '0.3';
+  if (btn) btn.style.opacity = undoStack.length > 0 || saveTimer ? '1' : '0.3';
 }
 
-async function saveToServer() {
-  if (!currentEventId || !state) return;
-  readEventFields();
-  pushUndo();
-  await api('PUT', '/events/' + currentEventId, state);
-  const ind = document.getElementById('saveIndicator');
-  ind.textContent = 'SAVED';
-  ind.classList.add('saved');
-  setTimeout(() => { ind.textContent = 'SAVING'; ind.classList.remove('saved'); }, 1500);
-}
+window.addEventListener('beforeunload', (e) => {
+  if (!hasUnsavedChanges()) return;
+  saveNow();
+  e.preventDefault();
+  e.returnValue = '';
+});
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden' && state) saveNow();
+});
 
 // ============ Roles ============
 function renderRoles() {
@@ -974,7 +1202,7 @@ function renderBody() {
 
 function esc(str) {
   if (!str) return '';
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
 function createEmptyRow(type = 'item') {
@@ -1358,20 +1586,22 @@ async function loadChineseFont(doc) {
 }
 
 // ============ Undo ============
-async function undo() {
-  if (undoStack.length === 0) return;
-  const prev = JSON.parse(undoStack.pop());
-  state = prev;
+// Undo first drops edits made since the last checkpoint (save), otherwise steps back one checkpoint.
+function undo() {
+  if (!state) return;
+  let target;
+  if (snapshotState() !== checkpointJson) target = checkpointJson;
+  else if (undoStack.length > 0) target = undoStack.pop();
+  else return;
+  state = JSON.parse(target);
+  checkpointJson = target;
   normalizeState();
   syncEventFields();
+  renderCustomFields();
   renderRoles();
   renderTable();
   updateUndoBtn();
-  await api('PUT', '/events/' + currentEventId, state);
-  const ind = document.getElementById('saveIndicator');
-  ind.textContent = 'RESTORED';
-  ind.classList.add('saved');
-  setTimeout(() => { ind.textContent = 'SAVING'; ind.classList.remove('saved'); }, 1500);
+  saveNow();
 }
 
 document.addEventListener('keydown', (e) => {
@@ -1407,39 +1637,38 @@ async function loadBackups() {
         <div style="font-size:12px;font-weight:500;font-family:var(--font-mono);color:var(--text-primary);">${timeStr}</div>
         <div style="font-size:11px;color:var(--text-muted);">${sizeKB} KB</div>
       </div>
-      <button class="btn btn-secondary btn-sm" onclick="restoreBackup('${esc(b.filename)}')">回復</button>
+      <button class="btn btn-secondary btn-sm" data-file="${esc(b.filename)}" onclick="restoreBackup(this.dataset.file)">回復</button>
     </div>`;
   }).join('');
 }
 
 async function restoreBackup(filename) {
   if (!confirm('確定要回復到這個版本嗎？目前的版本會自動備份。')) return;
-  const result = await api('POST', '/events/' + currentEventId + '/restore/' + filename);
-  if (result.ok && result.data) {
-    state = result.data;
-    normalizeState();
-    syncEventFields();
-    renderRoles();
-    renderTable();
-    closeBackupModal();
-    const ind = document.getElementById('saveIndicator');
-    ind.textContent = 'RESTORED';
-    ind.classList.add('saved');
-    setTimeout(() => { ind.textContent = 'SAVING'; ind.classList.remove('saved'); }, 2000);
+  if (!(await saveNow())) {
+    alert('目前的修改還沒儲存成功，請等儲存完成後再回復版本。');
+    return;
   }
+  const res = await apiFetch('POST', `/events/${encodeURIComponent(currentEventId)}/restore/${encodeURIComponent(filename)}`);
+  const result = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    alert('回復失敗：' + (result.error || 'HTTP ' + res.status));
+    return;
+  }
+  const before = checkpointJson;
+  applyLoadedEvent(result.data, res.headers.get('ETag'));
+  pushUndo(before); // undo can return to the version that was just replaced
+  closeBackupModal();
 }
 
 // ============ Init ============
 window.addEventListener('popstate', () => {
-  const params = new URLSearchParams(location.search);
-  const id = params.get('id');
-  if (id) openEvent(id); else showListPage();
+  const id = new URLSearchParams(location.search).get('id');
+  if (id) openEvent(id, { pushUrl: false }); else showListPage({ pushUrl: false });
 });
 
 (function init() {
-  const params = new URLSearchParams(location.search);
-  const id = params.get('id');
-  if (id) openEvent(id); else loadEventList();
+  const id = new URLSearchParams(location.search).get('id');
+  if (id) openEvent(id, { pushUrl: false }); else loadEventList();
 })();
 </script>
 </body>
