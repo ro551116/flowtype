@@ -18,16 +18,17 @@
   --bg-elevated: #f5f6fa;
   --bg-hover: #ecedf2;
   --accent: #c47a0a;
+  --accent-strong: #9a5c00; /* accent for text and filled buttons; ≥4.5:1 on light backgrounds */
   --accent-bright: #e8a030;
   --accent-dim: rgba(196,122,10,0.06);
   --accent-medium: rgba(196,122,10,0.2);
   --accent-glow: rgba(196,122,10,0.15);
   --text-primary: #1a1a2e;
   --text-secondary: #5a5a72;
-  --text-muted: #9898b0;
+  --text-muted: #6b6b82;
   --border: rgba(0,0,0,0.08);
   --border-light: rgba(0,0,0,0.12);
-  --success: #16a34a;
+  --success: #15803d;
   --danger: #dc2626;
   --radius: 8px;
   --radius-lg: 12px;
@@ -102,9 +103,9 @@ body::before {
   cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px;
 }
 .btn-primary {
-  background: var(--accent); color: #fff;
+  background: var(--accent-strong); color: #fff;
 }
-.btn-primary:hover { background: #b06e08; box-shadow: 0 2px 12px rgba(196,122,10,0.25); }
+.btn-primary:hover { background: #84500a; box-shadow: 0 2px 12px rgba(154,92,0,0.25); }
 .btn-secondary {
   background: var(--bg-elevated); color: var(--text-secondary);
   border: 1px solid var(--border-light);
@@ -115,7 +116,8 @@ body::before {
   border: 1px solid rgba(22,163,74,0.25);
 }
 .btn-success:hover { background: rgba(22,163,74,0.18); }
-.btn-sm { padding: 6px 12px; font-size: 11px; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
 
 /* ═══ Event List Page ═══ */
 .event-list-page { display: block; }
@@ -123,13 +125,15 @@ body::before {
 
 .list-header {
   display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 12px;
   margin-bottom: 28px;
 }
 .list-header h2 {
-  font-size: 13px; font-weight: 500;
-  color: var(--text-muted); text-transform: uppercase;
-  letter-spacing: 2px;
+  font-size: 16px; font-weight: 600;
+  color: var(--text-primary);
 }
+.list-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.list-actions .btn { white-space: nowrap; }
 
 .event-cards {
   display: grid;
@@ -146,6 +150,7 @@ body::before {
   position: relative;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  display: flex; flex-direction: column;
 }
 .event-card::before {
   content: '';
@@ -161,25 +166,35 @@ body::before {
 }
 .event-card:hover::before { opacity: 1; }
 .event-card h3 {
-  font-size: 15px; font-weight: 600; margin-bottom: 10px;
+  font-size: 16px; font-weight: 600; line-height: 1.4; margin-bottom: 6px;
   color: var(--text-primary);
 }
-.event-card .meta {
-  font-size: 11px; color: var(--text-muted);
-  display: flex; flex-direction: column; gap: 4px;
-  font-family: var(--font-mono);
+.event-card .card-date {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
 }
-.event-card .card-actions {
-  position: absolute; top: 16px; right: 16px;
-  display: flex; gap: 4px;
+.event-card .card-date .undated { color: var(--text-muted); font-weight: 500; }
+.event-card .countdown {
+  font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px;
+  background: var(--bg-elevated); color: var(--text-secondary);
 }
+.event-card .countdown.soon { background: #fdf3e2; color: var(--accent-strong); }
+.event-card .countdown.past { color: var(--text-muted); }
+.event-card .venue { font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+.event-card .card-footer {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  margin-top: auto; padding-top: 16px;
+}
+.event-card .updated { font-size: 12px; color: var(--text-muted); }
+.event-card .card-actions { display: flex; gap: 4px; flex-shrink: 0; }
 .event-card .card-actions button {
   background: var(--bg-elevated); border: 1px solid var(--border);
   border-radius: 6px; cursor: pointer; font-size: 14px;
-  opacity: 0; transition: all 0.2s; padding: 4px 6px;
-  color: var(--text-muted);
+  opacity: 0; transition: all 0.2s; padding: 4px 8px;
+  color: var(--text-secondary);
 }
-.event-card:hover .card-actions button { opacity: 1; }
+.event-card:hover .card-actions button,
+.event-card:focus-within .card-actions button { opacity: 1; }
 .event-card .card-actions button:hover {
   opacity: 1; color: var(--text-primary);
   border-color: var(--accent-medium);
@@ -206,19 +221,18 @@ body::before {
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .event-info h2 {
-  font-size: 11px; font-weight: 500; margin-bottom: 16px;
-  color: var(--text-muted); text-transform: uppercase;
-  letter-spacing: 2px;
+  font-size: 14px; font-weight: 600; margin-bottom: 16px;
+  color: var(--text-primary);
 }
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 14px;
 }
+.info-grid .span-2 { grid-column: span 2; }
 .info-grid label {
-  font-size: 10px; color: var(--text-muted); display: block;
-  margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px;
-  font-weight: 500;
+  font-size: 12px; color: var(--text-muted); display: block;
+  margin-bottom: 6px; font-weight: 500;
 }
 .info-grid input {
   width: 100%; padding: 10px 12px;
@@ -248,9 +262,8 @@ body::before {
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .roles-section h2 {
-  font-size: 11px; font-weight: 500; margin-bottom: 16px;
-  color: var(--text-muted); text-transform: uppercase;
-  letter-spacing: 2px;
+  font-size: 14px; font-weight: 600; margin-bottom: 16px;
+  color: var(--text-primary);
 }
 .roles-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .role-tag {
@@ -283,12 +296,12 @@ body::before {
 
 /* ═══ Role Colors (light theme) ═══ */
 .role-color-0 { background: #e3f2fd; color: #1565c0; }
-.role-color-1 { background: #fff3e0; color: #e65100; }
+.role-color-1 { background: #fff3e0; color: #bf360c; }
 .role-color-2 { background: #e8f5e9; color: #2e7d32; }
 .role-color-3 { background: #f3e5f5; color: #7b1fa2; }
 .role-color-4 { background: #fce4ec; color: #c62828; }
-.role-color-5 { background: #e0f7fa; color: #00838f; }
-.role-color-6 { background: #fff8e1; color: #f57f17; }
+.role-color-5 { background: #e0f7fa; color: #00727c; }
+.role-color-6 { background: #fff8e1; color: #a35400; }
 .role-color-7 { background: #efebe9; color: #4e342e; }
 
 /* ═══ Custom Fields Section ═══ */
@@ -302,9 +315,8 @@ body::before {
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .custom-fields-section h2 {
-  font-size: 11px; font-weight: 500; margin-bottom: 16px;
-  color: var(--text-muted); text-transform: uppercase;
-  letter-spacing: 2px;
+  font-size: 14px; font-weight: 600; margin-bottom: 16px;
+  color: var(--text-primary);
 }
 .custom-field-grid {
   display: grid;
@@ -353,9 +365,8 @@ body::before {
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .cue-section h2 {
-  font-size: 11px; font-weight: 500; margin-bottom: 16px;
-  color: var(--text-muted); text-transform: uppercase;
-  letter-spacing: 2px;
+  font-size: 14px; font-weight: 600; margin-bottom: 16px;
+  color: var(--text-primary);
 }
 .cue-table-wrapper { overflow-x: auto; margin: 0 -24px; padding: 0 24px; }
 table.cue-table {
@@ -365,17 +376,18 @@ table.cue-table {
 .cue-table th {
   background: var(--bg-elevated);
   padding: 10px 12px; text-align: left;
-  font-weight: 600; font-size: 11px;
+  font-weight: 600; font-size: 12px;
   color: var(--text-secondary);
   border-bottom: 2px solid var(--border-light);
   white-space: nowrap;
-  text-transform: uppercase; letter-spacing: 0.5px;
 }
 .cue-table td {
   padding: 4px 6px;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
 }
+/* Line the row number up with the first text line of the inputs beside it */
+.cue-table td.col-num { padding-top: 12px; }
 .cue-table tr { transition: background 0.15s; }
 .cue-table tr:hover { background: var(--accent-dim); }
 .cue-table input, .cue-table textarea {
@@ -400,7 +412,15 @@ table.cue-table {
 .cue-table input::placeholder, .cue-table textarea::placeholder {
   color: var(--text-muted);
 }
-.cue-table textarea { min-height: 36px; }
+/* Hints only in rows that are still empty, so filled rows are easy to scan */
+.cue-table tr:not(.is-empty) input:not(:focus)::placeholder,
+.cue-table tr:not(.is-empty) textarea:not(:focus)::placeholder { color: transparent; }
+.cue-table textarea { min-height: 36px; line-height: 1.5; resize: none; overflow: hidden; }
+/* Minimum widths keep every column readable; the wrapper scrolls sideways instead of squeezing */
+.cue-table .cell-time { min-width: 100px; }
+.cue-table .cell-dur { min-width: 52px; }
+.cue-table .cell-item { min-width: 200px; }
+.cue-table .cell-note { min-width: 150px; }
 
 td.row-actions { white-space: nowrap; text-align: center; }
 .row-actions button {
@@ -434,8 +454,8 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
 .insert-btn:hover { opacity: 1 !important; }
 
 /* Column widths */
-.col-num { width: 50px; text-align: center; }
-.col-time { width: 90px; }
+.col-num { width: 50px; text-align: center; white-space: nowrap; }
+.col-time { width: 112px; }
 .col-duration { width: 70px; }
 .col-item { width: 180px; }
 .col-note { min-width: 120px; }
@@ -445,11 +465,11 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
 
 /* ═══ Save Indicator ═══ */
 .save-indicator {
-  font-size: 11px; color: var(--text-muted);
+  font-size: 12px; color: var(--text-muted);
   font-family: var(--font-mono);
   transition: color 0.3s;
 }
-.save-indicator.saved { color: var(--accent); }
+.save-indicator.saved { color: var(--accent-strong); }
 .save-indicator.error { color: var(--danger); font-weight: 700; }
 
 /* ═══ Modals ═══ */
@@ -517,6 +537,16 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
   .container { padding: 16px; }
   .event-cards { grid-template-columns: 1fr; }
   .info-grid { grid-template-columns: 1fr; }
+  .info-grid .span-2 { grid-column: auto; }
+  .editor-toolbar { flex-wrap: wrap; }
+}
+/* Touch screens have no hover: keep row and card actions visible */
+@media (hover: none) {
+  .row-actions button, .insert-btn, .event-card .card-actions button { opacity: 0.8; }
+}
+@media (pointer: coarse) {
+  .btn { min-height: 44px; }
+  .row-actions button, .insert-btn, .event-card .card-actions button { min-width: 40px; min-height: 40px; }
 }
 </style>
 </head>
@@ -535,7 +565,7 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
   <div class="event-list-page" id="listPage">
     <div class="list-header">
       <h2 id="listTitle">所有活動</h2>
-      <div style="display:flex;gap:8px;align-items:center;">
+      <div class="list-actions">
         <button class="btn btn-secondary btn-sm" id="btnToggleArchived" onclick="toggleArchivedView()">📦 已封存</button>
         <button class="btn btn-secondary btn-sm" id="btnArchiveExpired" onclick="archiveExpired()">⏳ 一鍵封存過期</button>
         <button class="btn btn-primary" id="btnNewEvent" onclick="createNewEvent()">+ 新增活動</button>
@@ -548,16 +578,16 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
   <div class="event-editor-page" id="editorPage">
     <div class="editor-toolbar">
       <button class="btn btn-secondary btn-sm" onclick="showListPage()">&larr; 返回列表</button>
-      <button class="btn btn-secondary btn-sm" id="btnUndo" onclick="undo()" style="margin-left:auto;opacity:0.3;" title="復原上一步 (Ctrl+Z)">&#x21A9; 復原</button>
+      <button class="btn btn-secondary btn-sm" id="btnUndo" onclick="undo()" style="margin-left:auto;" title="復原上一步 (Ctrl+Z)" disabled>&#x21A9; 復原</button>
       <button class="btn btn-secondary btn-sm" id="btnBackups" onclick="openBackupModal()">&#x1f4be; 版本紀錄</button>
       <button class="btn btn-secondary btn-sm" onclick="window.open('/v/'+currentEventId,'_blank')">&#x1f517; 線上預覽</button>
     </div>
     <div class="event-info">
       <h2>活動資訊</h2>
       <div class="info-grid">
-        <div><label>活動名稱</label><input id="eventName" placeholder="例：2026 春季音樂會" oninput="autoSave()"></div>
+        <div class="span-2"><label>活動名稱</label><input id="eventName" placeholder="例：2026 春季音樂會" oninput="autoSave()"></div>
         <div><label>日期</label><input id="eventDate" type="date" oninput="autoSave()"></div>
-        <div><label>場地</label><input id="eventVenue" placeholder="例：台北國際會議中心" oninput="autoSave()"></div>
+        <div class="span-2"><label>場地</label><input id="eventVenue" placeholder="例：台北國際會議中心" oninput="autoSave()"></div>
         <div><label>主辦單位</label><input id="eventOrganizer" placeholder="例：XX文化公司" oninput="autoSave()"></div>
         <div><label>聯絡人</label><input id="eventContact" placeholder="例：王大明" oninput="autoSave()"></div>
         <div><label>聯絡電話</label><input id="eventPhone" placeholder="例：0912-345-678" oninput="autoSave()"></div>
@@ -572,7 +602,7 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
       </div>
     </div>
     <div class="custom-fields-section">
-      <h2>自訂欄位 <span style="font-weight:300;font-size:10px;color:var(--text-muted);text-transform:none;letter-spacing:0;">人員 · 廠商 · 備忘</span></h2>
+      <h2>自訂欄位 <span style="font-weight:400;font-size:12px;color:var(--text-muted);margin-left:4px;">人員 · 廠商 · 備忘</span></h2>
       <div class="custom-field-grid" id="customFieldGrid"></div>
       <div style="margin-top:12px;">
         <button class="btn btn-secondary btn-sm" onclick="addCustomField()">+ 新增欄位</button>
@@ -589,7 +619,7 @@ tr.drag-over td { border-top: 2px solid var(--accent) !important; }
       <div class="add-row-btn">
         <button class="btn btn-success btn-sm" onclick="addRow()">+ 新增項目</button>
         <button class="btn btn-secondary btn-sm" onclick="addSectionRow()">+ 新增段落分隔</button>
-        <button class="btn btn-secondary btn-sm" onclick="addInstructionRow()" style="color:#3b82f6;">+ 新增指示行</button>
+        <button class="btn btn-secondary btn-sm" onclick="addInstructionRow()" style="color:#1d4ed8;">+ 新增指示行</button>
       </div>
     </div>
   </div>
@@ -662,17 +692,18 @@ let listedEvents = new Map();
 
 const ROLE_COLORS = [
   { bg: '#e3f2fd', fg: '#1565c0' },
-  { bg: '#fff3e0', fg: '#e65100' },
+  { bg: '#fff3e0', fg: '#bf360c' },
   { bg: '#e8f5e9', fg: '#2e7d32' },
   { bg: '#f3e5f5', fg: '#7b1fa2' },
   { bg: '#fce4ec', fg: '#c62828' },
-  { bg: '#e0f7fa', fg: '#00838f' },
-  { bg: '#fff8e1', fg: '#f57f17' },
+  { bg: '#e0f7fa', fg: '#00727c' },
+  { bg: '#fff8e1', fg: '#a35400' },
   { bg: '#efebe9', fg: '#4e342e' },
 ];
+// PDF header fills carry white text, so every fill keeps ≥4.5:1 against white.
 const PDF_ROLE_COLORS = [
-  [30,136,229],[230,81,0],[46,125,50],[123,31,162],
-  [198,40,40],[0,131,143],[245,127,23],[78,52,46],
+  [21,101,192],[191,54,12],[46,125,50],[123,31,162],
+  [198,40,40],[0,114,124],[163,84,0],[78,52,46],
 ];
 
 // ============ API ============
@@ -690,6 +721,46 @@ async function api(method, path, body) {
 }
 
 // ============ List Page ============
+const WEEKDAYS = '日一二三四五六';
+
+function localTodayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function daysBetween(fromIso, toIso) {
+  const [a, b] = [fromIso, toIso].map(s => { const [y, m, d] = s.split('-').map(Number); return Date.UTC(y, m - 1, d); });
+  return Math.round((b - a) / 86400000);
+}
+
+// Active: upcoming soonest first, then undated, then past dates. Archived: latest event date first.
+function sortEvents(events, archived) {
+  const today = localTodayIso();
+  const group = iso => !iso ? 1 : iso >= today ? 0 : 2;
+  return [...events].sort((a, b) => {
+    const da = toInputDate(a.date), db = toInputDate(b.date);
+    if (archived) {
+      if (da !== db) return !da ? 1 : !db ? -1 : db.localeCompare(da);
+    } else {
+      const ga = group(da), gb = group(db);
+      if (ga !== gb) return ga - gb;
+      if (da !== db) return ga === 0 ? da.localeCompare(db) : db.localeCompare(da);
+    }
+    return new Date(b.updatedAt) - new Date(a.updatedAt);
+  });
+}
+
+function eventDateHtml(raw) {
+  const iso = toInputDate(raw);
+  if (!iso) return `<div class="card-date"><span class="undated">${raw ? esc(raw) : '日期未定'}</span></div>`;
+  const [y, m, d] = iso.split('-').map(Number);
+  const label = /^\d{4}-\d{2}-\d{2}$/.test(raw) ? `${iso}（${WEEKDAYS[new Date(y, m - 1, d).getDay()]}）` : raw;
+  const n = daysBetween(localTodayIso(), iso);
+  const [text, tone] = n === 0 ? ['今天', 'soon'] : n === 1 ? ['明天', 'soon']
+    : n > 1 ? [`${n} 天後`, n <= 7 ? 'soon' : ''] : [`已過 ${-n} 天`, 'past'];
+  return `<div class="card-date"><span>${esc(label)}</span><span class="countdown ${tone}">${text}</span></div>`;
+}
+
 async function loadEventList() {
   const query = showingArchived ? '?archived=true' : '';
   const events = await api('GET', '/events' + query);
@@ -703,23 +774,25 @@ async function loadEventList() {
     container.innerHTML = `<div class="empty-state"><p>${msg}</p>${showingArchived ? '' : '<button class="btn btn-primary" onclick="createNewEvent()">建立第一個活動</button>'}</div>`;
     return;
   }
-  listedEvents = new Map(events.map(ev => [ev.id, ev]));
+  const sorted = sortEvents(events, showingArchived);
+  listedEvents = new Map(sorted.map(ev => [ev.id, ev]));
   // Only escaped data attributes reach the markup; handlers read them back instead of embedding names in JS.
-  container.innerHTML = events.map(ev => `
+  const action = (fn, title, icon) =>
+    `<button onclick="event.stopPropagation();${fn}(this.closest('.event-card').dataset.id)" title="${title}" aria-label="${title}">${icon}</button>`;
+  const updated = iso => new Date(iso).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  container.innerHTML = sorted.map(ev => `
     <div class="event-card" data-id="${esc(ev.id)}" onclick="openEvent(this.dataset.id)">
-      <div class="card-actions">
-        ${showingArchived
-          ? `<button onclick="event.stopPropagation();unarchiveEvent(this.closest('.event-card').dataset.id)" title="還原">&#x21A9;</button>`
-          : `<button onclick="event.stopPropagation();archiveEvent(this.closest('.event-card').dataset.id)" title="封存">📦</button>
-             <button onclick="event.stopPropagation();duplicateEvent(this.closest('.event-card').dataset.id)" title="複製">&#x2398;</button>`
-        }
-        <button onclick="event.stopPropagation();deleteEvent(this.closest('.event-card').dataset.id)" title="刪除">&#x1f5d1;</button>
-      </div>
+      ${eventDateHtml(ev.date)}
       <h3>${esc(ev.name) || '未命名活動'}</h3>
-      <div class="meta">
-        ${ev.date ? '<span>' + esc(ev.date) + '</span>' : ''}
-        ${ev.venue ? '<span>' + esc(ev.venue) + '</span>' : ''}
-        <span>${new Date(ev.updatedAt).toLocaleString('zh-TW')}</span>
+      ${ev.venue ? `<div class="venue">${esc(ev.venue)}</div>` : ''}
+      <div class="card-footer">
+        <span class="updated">最後編輯 ${updated(ev.updatedAt)}</span>
+        <div class="card-actions">
+          ${showingArchived
+            ? action('unarchiveEvent', '還原', '&#x21A9;')
+            : action('archiveEvent', '封存', '📦') + action('duplicateEvent', '複製', '📋')}
+          ${action('deleteEvent', '刪除', '&#x1f5d1;')}
+        </div>
       </div>
     </div>
   `).join('');
@@ -1089,7 +1162,7 @@ function pushUndo(json) {
 
 function updateUndoBtn() {
   const btn = document.getElementById('btnUndo');
-  if (btn) btn.style.opacity = undoStack.length > 0 || saveTimer ? '1' : '0.3';
+  if (btn) btn.disabled = !(undoStack.length > 0 || saveTimer);
 }
 
 window.addEventListener('beforeunload', (e) => {
@@ -1158,38 +1231,40 @@ function renderBody() {
   let html = '';
   let num = 1;
   state.rows.forEach((row, i) => {
+    const dragAttrs = `draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event)" ondragenter="onDragEnter(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,${i})" ondragend="onDragEnd(event)"`;
     if (row.isSection) {
       const colspan = 4 + state.roles.length + 1;
-      html += `<tr draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event)" ondragenter="onDragEnter(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,${i})" ondragend="onDragEnd(event)" style="background:var(--bg-elevated);">`;
-      html += `<td colspan="${colspan}" style="padding:10px 12px;font-weight:600;font-size:13px;color:var(--accent);border-left:3px solid var(--accent);">`;
+      html += `<tr ${dragAttrs} class="${row.sectionLabel ? '' : 'is-empty'}" style="background:var(--bg-elevated);">`;
+      html += `<td colspan="${colspan}" style="padding:10px 12px;font-weight:600;font-size:13px;color:var(--accent-strong);border-left:3px solid var(--accent);">`;
       html += `<span class="drag-handle" title="拖曳排序">&#x2630;</span> `;
-      html += `<input value="${esc(row.sectionLabel)}" placeholder="段落名稱（例：彩排、正式演出）" style="font-weight:600;font-size:13px;color:var(--accent);width:calc(100% - 100px);background:transparent;border:1px solid transparent;padding:4px 8px;border-radius:4px;font-family:var(--font-ui);" onfocus="this.style.borderColor='var(--accent-medium)';this.style.background='var(--bg-base)'" onblur="this.style.borderColor='transparent';this.style.background='transparent'" oninput="state.rows[${i}].sectionLabel=this.value;autoSave()">`;
+      html += `<input value="${esc(row.sectionLabel)}" placeholder="段落名稱（例：彩排、正式演出）" style="font-weight:600;font-size:13px;color:var(--accent-strong);width:calc(100% - 100px);background:transparent;border:1px solid transparent;padding:4px 8px;border-radius:4px;font-family:var(--font-ui);" onfocus="this.style.borderColor='var(--accent-medium)';this.style.background='var(--bg-base)'" onblur="this.style.borderColor='transparent';this.style.background='transparent'" oninput="state.rows[${i}].sectionLabel=this.value;autoSave()">`;
       html += `<span style="float:right;">`;
       html += `<button class="insert-btn" onclick="insertRow(${i})" title="在下方插入">&#x2795;</button>`;
-      html += `<button style="background:none;border:none;cursor:pointer;opacity:0.4;font-size:14px;color:var(--danger);transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'" onclick="deleteRow(${i})">&#x1f5d1;</button>`;
+      html += `<button style="background:none;border:none;cursor:pointer;opacity:0.4;font-size:14px;color:var(--danger);transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'" onclick="deleteRow(${i})" title="刪除">&#x1f5d1;</button>`;
       html += `</span></td></tr>`;
     } else if (row.isInstruction) {
       const colspan = 4 + state.roles.length + 1;
-      html += `<tr draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event)" ondragenter="onDragEnter(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,${i})" ondragend="onDragEnd(event)" style="background:rgba(59,130,246,0.05);">`;
-      html += `<td colspan="${colspan}" style="padding:8px 12px;font-size:13px;color:#3b82f6;border-left:3px solid #3b82f6;">`;
+      html += `<tr ${dragAttrs} class="${row.instructionText ? '' : 'is-empty'}" style="background:rgba(59,130,246,0.05);">`;
+      html += `<td colspan="${colspan}" style="padding:8px 12px;font-size:13px;color:#1d4ed8;border-left:3px solid #3b82f6;">`;
       html += `<span class="drag-handle" title="拖曳排序">&#x2630;</span> `;
       html += `<span style="opacity:0.4;font-weight:600;">【</span>`;
-      html += `<input value="${esc(row.instructionText)}" placeholder="指示/備忘內容（例：新娘換裝，造型時間 25 分鐘）" style="font-size:13px;color:#3b82f6;width:calc(100% - 130px);background:transparent;border:1px solid transparent;padding:4px 8px;border-radius:4px;font-family:var(--font-ui);" onfocus="this.style.borderColor='rgba(59,130,246,0.3)';this.style.background='var(--bg-base)'" onblur="this.style.borderColor='transparent';this.style.background='transparent'" oninput="state.rows[${i}].instructionText=this.value;autoSave()">`;
+      html += `<input value="${esc(row.instructionText)}" placeholder="指示/備忘內容（例：新娘換裝，造型時間 25 分鐘）" style="font-size:13px;color:#1d4ed8;width:calc(100% - 130px);background:transparent;border:1px solid transparent;padding:4px 8px;border-radius:4px;font-family:var(--font-ui);" onfocus="this.style.borderColor='rgba(59,130,246,0.3)';this.style.background='var(--bg-base)'" onblur="this.style.borderColor='transparent';this.style.background='transparent'" oninput="state.rows[${i}].instructionText=this.value;autoSave()">`;
       html += `<span style="opacity:0.4;font-weight:600;">】</span>`;
       html += `<span style="float:right;">`;
       html += `<button class="insert-btn" onclick="insertRow(${i})" title="在下方插入">&#x2795;</button>`;
-      html += `<button style="background:none;border:none;cursor:pointer;opacity:0.4;font-size:14px;color:var(--danger);transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'" onclick="deleteRow(${i})">&#x1f5d1;</button>`;
+      html += `<button style="background:none;border:none;cursor:pointer;opacity:0.4;font-size:14px;color:var(--danger);transition:opacity 0.2s;" onmouseenter="this.style.opacity='1'" onmouseleave="this.style.opacity='0.4'" onclick="deleteRow(${i})" title="刪除">&#x1f5d1;</button>`;
       html += `</span></td></tr>`;
     } else {
-      html += `<tr draggable="true" data-idx="${i}" ondragstart="onDragStart(event,${i})" ondragover="onDragOver(event)" ondragenter="onDragEnter(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event,${i})" ondragend="onDragEnd(event)">`;
-      html += `<td class="col-num" style="color:var(--text-muted);font-size:11px;font-family:var(--font-mono);"><span class="drag-handle" title="拖曳排序">&#x2630;</span> ${num++}</td>`;
-      html += `<td><input value="${esc(row.time)}" placeholder="時間" style="font-family:var(--font-mono);font-size:12px;" oninput="state.rows[${i}].time=this.value;autoSave()"></td>`;
-      html += `<td><input value="${esc(row.duration)}" placeholder="min" style="font-family:var(--font-mono);font-size:12px;text-align:center;" oninput="state.rows[${i}].duration=this.value;autoSave()"></td>`;
-      html += `<td><textarea placeholder="項目名稱" oninput="state.rows[${i}].item=this.value;autoSave()">${esc(row.item)}</textarea></td>`;
+      const empty = !row.time && !row.duration && !row.item && !state.roles.some(r => row.notes && row.notes[r]);
+      html += `<tr ${dragAttrs} class="${empty ? 'is-empty' : ''}">`;
+      html += `<td class="col-num" style="color:var(--text-muted);font-size:12px;font-family:var(--font-mono);"><span class="drag-handle" title="拖曳排序">&#x2630;</span> ${num++}</td>`;
+      html += `<td><input class="cell-time" value="${esc(row.time)}" placeholder="時間" style="font-family:var(--font-mono);font-size:12px;" oninput="state.rows[${i}].time=this.value;autoSave()"></td>`;
+      html += `<td><input class="cell-dur" value="${esc(row.duration)}" placeholder="min" style="font-family:var(--font-mono);font-size:12px;text-align:center;" oninput="state.rows[${i}].duration=this.value;autoSave()"></td>`;
+      html += `<td><textarea class="cell-item" placeholder="項目名稱" oninput="state.rows[${i}].item=this.value;autoGrow(this);autoSave()">${esc(row.item)}</textarea></td>`;
       state.roles.forEach(role => {
         const val = (row.notes && row.notes[role]) || '';
         const ri = state.roles.indexOf(role);
-        html += `<td><textarea placeholder="${esc(role)}備註" oninput="state.rows[${i}].notes[state.roles[${ri}]]=this.value;autoSave()">${esc(val)}</textarea></td>`;
+        html += `<td><textarea class="cell-note" placeholder="${esc(role)}備註" oninput="state.rows[${i}].notes[state.roles[${ri}]]=this.value;autoGrow(this);autoSave()">${esc(val)}</textarea></td>`;
       });
       html += `<td class="row-actions">`;
       html += `<button class="insert-btn" onclick="insertRow(${i})" title="在下方插入">&#x2795;</button>`;
@@ -1198,7 +1273,28 @@ function renderBody() {
     }
   });
   body.innerHTML = html;
+  autoGrowAll();
 }
+
+// Textareas grow with their content so nothing hides behind an inner scrollbar.
+// +2px: height includes the 1px borders, scrollHeight does not.
+function autoGrow(el) {
+  el.style.height = 'auto';
+  if (el.scrollHeight) el.style.height = el.scrollHeight + 2 + 'px';
+}
+
+function autoGrowAll() {
+  const areas = [...document.querySelectorAll('#cueBody textarea')];
+  areas.forEach(a => { a.style.height = 'auto'; });   // write all, then read all: one layout pass
+  const heights = areas.map(a => a.scrollHeight);
+  areas.forEach((a, k) => { if (heights[k]) a.style.height = heights[k] + 2 + 'px'; });
+}
+
+let growTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(growTimer);
+  growTimer = setTimeout(() => { if (state) autoGrowAll(); }, 150);
+});
 
 function esc(str) {
   if (!str) return '';
@@ -1298,6 +1394,25 @@ function onExportTypeChange() {
   }
 }
 
+// ============ PDF column sizing ============
+// Width (mm) that prints the longest line of `texts` on one line at `fontSize` pt.
+function fitColumnWidth(doc, texts, fontSize, padding, min, max) {
+  doc.setFontSize(fontSize);
+  let widest = 0;
+  texts.forEach(t => String(t || '').split('\n').forEach(line => { widest = Math.max(widest, doc.getTextWidth(line)); }));
+  return Math.min(max, Math.max(min, widest + padding * 2 + 1));
+}
+
+// Split `total` mm between columns: each gets its minimum, the rest follows how much text it holds,
+// so empty role columns stay narrow and the item column gets room.
+function distributeWidths(total, columns) {
+  const minSum = columns.reduce((s, c) => s + c.min, 0);
+  if (minSum >= total) return columns.map(c => c.min * total / minSum);
+  const weights = columns.map(c => Math.sqrt(1 + c.texts.reduce((n, t) => n + String(t || '').length, 0)));
+  const weightSum = weights.reduce((a, b) => a + b, 0);
+  return columns.map((c, i) => c.min + (total - minSum) * weights[i] / weightSum);
+}
+
 async function generatePDF() {
   const exportType = document.querySelector('input[name="exportType"]:checked').value;
   if (exportType === 'master') return generateMasterPDF();
@@ -1352,7 +1467,7 @@ async function generatePDF() {
     if (row.isSection) {
       bodyData.push([{ content: row.sectionLabel || '---', colSpan: headers.length, styles: { fontStyle: 'bold', fillColor: [230,232,238], textColor: [26,26,46], fontSize: 8, cellPadding: 1.5, font: 'NotoSansTC' } }]);
     } else if (row.isInstruction) {
-      bodyData.push([{ content: '【' + (row.instructionText || '') + '】', colSpan: headers.length, styles: { fontStyle: 'italic', fillColor: [230,240,255], textColor: [59,130,246], fontSize: 7.5, cellPadding: 1.5, font: 'NotoSansTC' } }]);
+      bodyData.push([{ content: '【' + (row.instructionText || '') + '】', colSpan: headers.length, styles: { fontStyle: 'italic', fillColor: [230,240,255], textColor: [29,78,216], fontSize: 7.5, cellPadding: 1.5, font: 'NotoSansTC' } }]);
     } else {
       const r = [num++, row.time || '', row.duration || '', row.item || ''];
       selectedRoles.forEach(role => r.push((row.notes && row.notes[role]) || ''));
@@ -1369,21 +1484,26 @@ async function generatePDF() {
   const margin = 10;
   const tableW = pageW - margin * 2;
   const roleCount = selectedRoles.length;
-  const numW = 6, timeW = 14, durW = 10;
-  const fixedW = numW + timeW + durW;
-  const remainForContent = tableW - fixedW;
-  const itemW = Math.max(24, Math.min(40, remainForContent * 0.12));
-  const remainForRoles = remainForContent - itemW;
-  const roleW = Math.max(18, remainForRoles / roleCount);
-  const roleColStyles = {};
-  for (let i = 0; i < roleCount; i++) { roleColStyles[4 + i] = { cellWidth: roleW }; }
-
   const baseFontSize = roleCount >= 7 ? 6.5 : roleCount >= 5 ? 7 : 7.5;
   const headerFontSize = baseFontSize + 0.5;
   const maxRowH = isLandscape ? 45 : 55;
 
+  const itemRows = state.rows.filter(r => !r.isSection && !r.isInstruction);
+  const numW = 6;
+  const timeW = fitColumnWidth(doc, ['時間', ...itemRows.map(r => r.time)], baseFontSize, 1.5, 10, 30);
+  const durW = fitColumnWidth(doc, ['時長', ...itemRows.map(r => r.duration)], baseFontSize, 1.5, 8, 14);
+  const [itemW, ...roleWs] = distributeWidths(tableW - numW - timeW - durW, [
+    { min: 28, texts: itemRows.map(r => r.item) },
+    ...selectedRoles.map(role => ({
+      min: fitColumnWidth(doc, [role], headerFontSize, 1.5, 14, 30),
+      texts: itemRows.map(r => r.notes && r.notes[role]),
+    })),
+  ]);
+  const roleColStyles = {};
+  roleWs.forEach((w, i) => { roleColStyles[4 + i] = { cellWidth: w }; });
+
   doc.autoTable({
-    startY: infoY, head: [headers], body: bodyData, margin: { left: margin, right: margin, top: 8, bottom: 12 },
+    startY: infoY, head: [headers], body: bodyData, margin: { left: margin, right: margin, top: 8, bottom: 12 }, rowPageBreak: 'avoid',
     styles: { font: 'NotoSansTC', fontSize: baseFontSize, cellPadding: 1.5, lineWidth: 0.1, lineColor: [200,200,200], overflow: 'linebreak', valign: 'top' },
     headStyles: { fillColor: [26,26,46], textColor: [255,255,255], fontSize: headerFontSize, fontStyle: 'bold', font: 'NotoSansTC', cellPadding: 1.5 },
     columnStyles: { 0: { cellWidth: numW, halign: 'center' }, 1: { cellWidth: timeW }, 2: { cellWidth: durW, halign: 'center' }, 3: { cellWidth: itemW }, ...roleColStyles },
@@ -1453,7 +1573,7 @@ async function generateMasterPDF() {
     if (row.isSection) {
       bodyData.push([{ content: row.sectionLabel || '---', colSpan: 4, styles: { fontStyle: 'bold', fillColor: [230,232,238], textColor: [26,26,46], fontSize: 9, cellPadding: 2, font: 'NotoSansTC' } }]);
     } else if (row.isInstruction) {
-      bodyData.push([{ content: '【' + (row.instructionText || '') + '】', colSpan: 4, styles: { fontStyle: 'italic', fillColor: [230,240,255], textColor: [59,130,246], fontSize: 8, cellPadding: 1.5, font: 'NotoSansTC' } }]);
+      bodyData.push([{ content: '【' + (row.instructionText || '') + '】', colSpan: 4, styles: { fontStyle: 'italic', fillColor: [230,240,255], textColor: [29,78,216], fontSize: 8, cellPadding: 1.5, font: 'NotoSansTC' } }]);
     } else {
       if (!row.item && !row.time) return; // skip empty rows
       bodyData.push([num++, row.time || '', row.duration || '', row.item || '']);
@@ -1462,12 +1582,15 @@ async function generateMasterPDF() {
 
   const margin = 12;
   const tableW = pageW - margin * 2;
+  const itemRows = state.rows.filter(r => !r.isSection && !r.isInstruction);
+  const timeW = fitColumnWidth(doc, ['時間', ...itemRows.map(r => r.time)], 9, 2.5, 14, 34);
+  const durW = fitColumnWidth(doc, ['時長', ...itemRows.map(r => r.duration)], 9, 2.5, 12, 18);
 
   doc.autoTable({
-    startY: infoY, head: [headers], body: bodyData, margin: { left: margin, right: margin, top: 8, bottom: 12 },
+    startY: infoY, head: [headers], body: bodyData, margin: { left: margin, right: margin, top: 8, bottom: 12 }, rowPageBreak: 'avoid',
     styles: { font: 'NotoSansTC', fontSize: 9, cellPadding: 2.5, lineWidth: 0.1, lineColor: [200,200,200], overflow: 'linebreak', valign: 'top' },
     headStyles: { fillColor: [26,26,46], textColor: [255,255,255], fontSize: 10, fontStyle: 'bold', font: 'NotoSansTC', cellPadding: 2.5 },
-    columnStyles: { 0: { cellWidth: 8, halign: 'center' }, 1: { cellWidth: 22 }, 2: { cellWidth: 12, halign: 'center' }, 3: { cellWidth: tableW - 42 } },
+    columnStyles: { 0: { cellWidth: 8, halign: 'center' }, 1: { cellWidth: timeW }, 2: { cellWidth: durW, halign: 'center' }, 3: { cellWidth: tableW - 8 - timeW - durW } },
     didDrawPage: function() {
       doc.setFontSize(7); doc.setTextColor(150); doc.setFont('NotoSansTC', 'normal');
       doc.text(`${state.event.name || '活動流程表'} — 流程大表 — 第 ${doc.internal.getCurrentPageInfo().pageNumber} 頁`, pageW / 2, pageH - 6, { align: 'center' });
@@ -1494,6 +1617,7 @@ async function generateCuePDF() {
   const pageH = doc.internal.pageSize.getHeight();
   const margin = 10;
   const tableW = pageW - margin * 2;
+  const timeW = fitColumnWidth(doc, ['時間', ...state.rows.filter(r => !r.isSection && !r.isInstruction).map(r => r.time)], 8.5, 2, 14, 34);
 
   for (let ri = 0; ri < selectedRoles.length; ri++) {
     const role = selectedRoles[ri];
@@ -1526,7 +1650,7 @@ async function generateCuePDF() {
       if (row.isSection) {
         bodyData.push([{ content: row.sectionLabel || '---', colSpan: 4, styles: { fontStyle: 'bold', fillColor: [230,232,238], textColor: [26,26,46], fontSize: 8.5, cellPadding: 2, font: 'NotoSansTC' } }]);
       } else if (row.isInstruction) {
-        bodyData.push([{ content: '【' + (row.instructionText || '') + '】', colSpan: 4, styles: { fontStyle: 'italic', fillColor: [230,240,255], textColor: [59,130,246], fontSize: 7.5, cellPadding: 1.5, font: 'NotoSansTC' } }]);
+        bodyData.push([{ content: '【' + (row.instructionText || '') + '】', colSpan: 4, styles: { fontStyle: 'italic', fillColor: [230,240,255], textColor: [29,78,216], fontSize: 7.5, cellPadding: 1.5, font: 'NotoSansTC' } }]);
       } else {
         const note = (row.notes && row.notes[role]) || '';
         // Skip rows where this role has no notes AND no item
@@ -1536,15 +1660,15 @@ async function generateCuePDF() {
     });
 
     const noteW = Math.max(tableW * 0.4, 60);
-    const itemW = tableW - 8 - 18 - noteW;
+    const itemW = tableW - 8 - timeW - noteW;
 
     doc.autoTable({
-      startY: infoY, head: [headers], body: bodyData, margin: { left: margin, right: margin, top: 8, bottom: 12 },
+      startY: infoY, head: [headers], body: bodyData, margin: { left: margin, right: margin, top: 8, bottom: 12 }, rowPageBreak: 'avoid',
       styles: { font: 'NotoSansTC', fontSize: 8.5, cellPadding: 2, lineWidth: 0.1, lineColor: [200,200,200], overflow: 'linebreak', valign: 'top' },
       headStyles: { fillColor: [26,26,46], textColor: [255,255,255], fontSize: 9, fontStyle: 'bold', font: 'NotoSansTC', cellPadding: 2 },
       columnStyles: {
         0: { cellWidth: 8, halign: 'center' },
-        1: { cellWidth: 18 },
+        1: { cellWidth: timeW },
         2: { cellWidth: itemW },
         3: { cellWidth: noteW, fillColor: [Math.round(roleColor[0]*0.08+255*0.92), Math.round(roleColor[1]*0.08+255*0.92), Math.round(roleColor[2]*0.08+255*0.92)] }
       },

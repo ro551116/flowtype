@@ -84,5 +84,9 @@ docker run -p 3000:3000 -v $(pwd)/data:/data cue-sheet
 - 前端無模組化，函式為全域。修改 JS 需編輯 HTML 內的 `<script>`。
 - 使用者資料寫進 `innerHTML` 一律經過 `esc()`；inline handler 不可嵌入使用者文字，改用 `data-*` 屬性再從 `this.dataset` 讀取。
 - 編輯器儲存流程：`autoSave()` 延遲 800ms → `saveNow()` 串行送出 PUT（帶 `If-Match`）→ 失敗時狀態顯示 `SAVE FAILED` 並每 5 秒重試；離開編輯頁前會先送出未儲存的修改。
+- UI 文字對比至少 4.5:1：文字與實心按鈕用 `--accent-strong`（`--accent` 只給邊框、logo 等裝飾）；`--text-muted` 已調到可讀。角色配色在 `ROLE_COLORS`／`PDF_ROLE_COLORS`／`view.html` 的 `.rc-*` 三處，要一起改。最小字級 12px。
+- 流程表重繪後呼叫 `autoGrowAll()`，讓 textarea 依內容長高；欄寬靠 `.cell-*` 的 `min-width` 撐住，窄螢幕改成整張表橫向捲動。
+- 觸控裝置（`hover: none`）上，列操作與卡片操作按鈕一律顯示；`pointer: coarse` 時按鈕至少 40–44px。
+- PDF 欄寬：時間／時長用 `fitColumnWidth()` 依實際文字量寬度，項目與角色欄用 `distributeWidths()` 依內容分配；表格設 `rowPageBreak: 'avoid'`，一列不跨頁。
 - PDF 中文顯示仰賴 `public/fonts/NotoSansTC-Regular.ttf`，前端載入後 base64 注入 jsPDF。
 - `flowtype-cli`（hg-vault `.agent/tools/go/flowtype-cli/`）使用同一組 API，改 API 形狀時要一起確認。
